@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload | AI Interview Simulator</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">Virtual Interview Simulator</div>
+    <div class="nav-links">
+        <a href="/" class="btn-outline">Home</a>
+    </div>
+</nav>
+
+<section class="form-section">
+    <div class="form-container">
+        <h1>Start Your Mock Interview</h1>
+        <p class="form-subtext">
+            Upload your resume and provide the job description and company name.
+            We will generate a personalized interview experience for you!
+        </p>
+
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+
+            <label>Upload Resume (PDF)</label>
+            <input type="file" name="resume" required>
+
+            <label>Company Name</label>
+            <input type="text" name="company" placeholder="e.g., Google, Deloitte..." required>
+
+            <label>Job Description</label>
+            <textarea name="jobDescription" rows="6" placeholder="Paste job description here..." required></textarea>
+
+            <button type="submit" class="btn-primary full-width">
+                Generate Interview
+            </button>
+        </form>
+    </div>
+</section>
+
+</body>
+</html>
