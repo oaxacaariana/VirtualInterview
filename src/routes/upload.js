@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
-const { handleUpload, showUploadPage } = require('../controllers/uploadController');
+const { handleUpload, showUploadPage, viewResume } = require('../controllers/uploadController');
 
 // const upload = multer({ dest: "uploads/" }); 
 
@@ -17,5 +17,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 router.get('/', showUploadPage); 
 router.post('/', upload.single('resume'), handleUpload);
+router.get('/preview/:id', viewResume);
 
 module.exports = router;

@@ -15,35 +15,58 @@
 </nav>
 
 <section class="results-section">
-    <h1>Your Interview Feedback</h1>
+    <h1>Role Fit Assessment</h1>
 
     <div class="score-card">
-        <h2>Overall Performance Score</h2>
+        <h2>Fit Score</h2>
         <div class="score-circle">
-           <%= score %>%
+           <%= typeof fitScore === 'number' ? fitScore + '%' : fitScore %>
         </div>
+        <p class="muted">
+            Based on your resume (<%= resumeName %>) and the job description<% if (company) { %> at <%= company %><% } %>.
+        </p>
     </div>
 
     <div class="feedback-grid">
 
         <div class="feedback-card">
-            <h3>Verbal Communication</h3>
-            <p><%= verbalFeedback %></p>
+            <h3>Strengths</h3>
+            <% if (positives && positives.length) { %>
+                <ul>
+                    <% positives.forEach(item => { %>
+                        <li><%= item %></li>
+                    <% }) %>
+                </ul>
+            <% } else { %>
+                <p class="muted">No positive signals captured yet.</p>
+            <% } %>
         </div>
 
         <div class="feedback-card">
-            <h3>Eye Contact</h3>
-            <p><%= eyeContactFeedback %></p>
+            <h3>Risks / Gaps</h3>
+            <% if (negatives && negatives.length) { %>
+                <ul>
+                    <% negatives.forEach(item => { %>
+                        <li><%= item %></li>
+                    <% }) %>
+                </ul>
+            <% } else { %>
+                <p class="muted">No risks identified.</p>
+            <% } %>
         </div>
 
         <div class="feedback-card">
-            <h3>Posture & Body Language</h3>
-            <p><%= postureFeedback %></p>
+            <h3>Summary</h3>
+            <p><%= summary || 'LLM summary unavailable.' %></p>
         </div>
 
         <div class="feedback-card">
-            <h3>Improvement Suggestions</h3>
-            <p><%= improvementSuggestions %></p>
+            <h3>Job & Resume</h3>
+            <p><strong>Job description:</strong> <%= jobSnippet || 'Not provided' %></p>
+            <p><strong>Resume:</strong> <%= resumeName %> (<%= resumeSizeKb ? resumeSizeKb + ' KB' : 'size n/a' %>)</p>
+            <% if (resumeId) { %>
+                <p><strong>Resume ID:</strong> <%= resumeId %></p>
+            <% } %>
         </div>
 
     </div>

@@ -1,13 +1,15 @@
 const showResultsPage = (req, res) => {
-  // placeholders until we do rhe intergrations and all the other features  
   res.render('results', { 
-    score: 'Pending...',
-    verbalFeedback: 'Pending...',
-    eyeContactFeedback: 'Pending...',
-    postureFeedback: 'Pending...',
-    improvementSuggestions: 'Pending...'
+    fitScore: 'Pending',
+    positives: [],
+    negatives: [],
+    summary: '',
+    company: '',
+    jobSnippet: '',
+    resumeName: 'Not provided',
+    resumeSizeKb: null,
+    resumeId: null,
   });
-  
 };
 
 module.exports = { showResultsPage };

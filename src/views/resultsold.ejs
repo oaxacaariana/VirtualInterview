@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results | AI Interview Simulator</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">Virtual Interview Simulator</div>
+    <div class="nav-links">
+        <a href="/" class="btn-outline">Home</a>
+        <a href="/openai" class="btn-outline">AI Coach</a>
+    </div>
+</nav>
+
+<section class="results-section">
+    <h1>Your Interview Feedback</h1>
+
+    <div class="score-card">
+        <h2>Overall Performance Score</h2>
+        <div class="score-circle">
+           <%= score %>%
+        </div>
+    </div>
+
+    <div class="feedback-grid">
+
+        <div class="feedback-card">
+            <h3>Verbal Communication</h3>
+            <p><%= verbalFeedback %></p>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Eye Contact</h3>
+            <p><%= eyeContactFeedback %></p>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Posture & Body Language</h3>
+            <p><%= postureFeedback %></p>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Improvement Suggestions</h3>
+            <p><%= improvementSuggestions %></p>
+        </div>
+
+    </div>
+
+    <div class="center">
+        <a href="/upload" class="btn-primary">Try Another Interview</a>
+    </div>
+
+</section>
+
+</body>
+</html>
