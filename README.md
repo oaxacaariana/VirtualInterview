@@ -17,6 +17,8 @@ A small Express/EJS prototype for uploading resumes, previewing them, and wiring
    MONGODB_DB=virtual_interview
    OPENAI_API_KEY=your-key-here   # needed when LLM scoring is wired in
    MODEL=gpt-4.1-mini
+   WEB_SEARCH_ENDPOINT=https://serpapi.com/search.json   # if using SerpAPI
+   WEB_SEARCH_KEY=your-serpapi-key
    ```
 5) **Run**
    ```bash
@@ -26,17 +28,19 @@ A small Express/EJS prototype for uploading resumes, previewing them, and wiring
 6) Visit `http://localhost:3000` to upload a resume; uploads land in `/uploads`.
 
 ## Current Endpoints
-- `GET /` – upload form (home page)
-- `POST /upload` – saves the file to `uploads/` (via Multer)
-- `GET /upload/preview/:id` – placeholder for viewing parsed text (to be wired once parser + DB are added)
+- `GET /` � home
+- `GET /upload` / `POST /upload` � upload & score resume
+- `GET /results` � latest score view
+- `GET /openai` � mock interviewer (auth required)
+- `GET /openai/logs` � debug: recent transcripts (auth required)
+- `GET /upload/preview/:id` � resume text preview (uses parsed text when available)
 
-## TODO (PDF parser + scoring)
-- Implement real resume text extraction in `src/utils/resumeParser.js` (keep stub; teammate’s parser will drop in) and store parsed text.
-- Update preview endpoint (`GET /upload/preview/:id`) to show parsed text and fail gracefully on binary-only content.
-- Integrate LLM-driven interview question responses and analysis, including UI for displaying feedback and comments.
-- Persist interview/chat logs and surface richer history views.
-- Expand interview chat prompt diversity: more variable behaviors, probing, and role-specific nuances.
-- Add interview history UI and question/response analysis display (per-turn and overall).
+## TODO (next up)
+- Plug in real resume text extraction in `src/utils/resumeParser.js` (parser still stubbed) and show parsed text in preview.
+- Fix and harden web research integration (SerpAPI): correct request shape, error handling, env docs.
+- Add interviewer personality presets/tuning controls.
+- Expose interview history UI and per-turn analysis view (turns already stored).
+- Broaden prompt diversity with more role-specific probes and follow-up behaviors.
 
 ## Notes
 - Keep `.env` out of version control.

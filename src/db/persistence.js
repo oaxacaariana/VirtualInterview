@@ -11,15 +11,46 @@ const buildUser = ({ username, name, passwordHash, role = 'candidate' }) => ({
   createdAt: new Date(),
 });
 
-const buildChatLog = ({ userId = null, sessionId, messages = [], model }) => ({
+const buildChatLog = ({
+  userId = null,
+  sessionId,
+  chatId,
+  messages = [],
+  model,
+  status = 'in-progress',
+}) => ({
+  type: 'transcript',
   userId,
   sessionId,
+  chatId,
+  status,
   model,
   messages: messages.map((m) => ({
     role: m.role,
     content: m.content,
     at: m.at || new Date(),
   })),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
+const buildChatTurn = ({
+  userId = null,
+  sessionId,
+  chatId,
+  model,
+  turn,
+  prompt,
+  reply,
+}) => ({
+  type: 'turn',
+  userId,
+  sessionId,
+  chatId,
+  model,
+  turn,
+  prompt,
+  reply,
   createdAt: new Date(),
 });
 
@@ -80,6 +111,7 @@ const buildResumeFile = ({
 module.exports = {
   buildUser,
   buildChatLog,
+  buildChatTurn,
   buildInterviewScore,
   buildResumeScore,
   buildResumeFile,

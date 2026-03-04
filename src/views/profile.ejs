@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Profile | Virtual Interview</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/stylesheets/styles.css">
 </head>
 <body>
@@ -15,10 +16,10 @@
             <% if (success) { %><p style="color:#6f6;"><%= success %></p><% } %>
             <form action="/profile" method="POST">
                 <label>Username</label>
-                <input type="text" value="<%= user?.username %>" disabled>
+                <input type="text" value="<%= (user && user.username) ? user.username : '' %>" disabled>
 
                 <label>Name</label>
-                <input type="text" name="name" placeholder="Your name" value="<%= user?.name || '' %>">
+                <input type="text" name="name" placeholder="Your name" value="<%= (user && user.name) ? user.name : '' %>">
 
                 <label>New Password (leave blank to keep current)</label>
                 <input type="password" name="password" placeholder="********">
@@ -44,16 +45,18 @@
                       : score <= 50 ? '#f0a202'
                       : score <= 75 ? '#8ac12f'
                       : '#3fc26c');
+                    const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
+                    const ringLabel = score === null ? '-' : score;
                 %>
                     <div class="feedback-card">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                           <h3><%= r.originalName %></h3>
-                          <div class="score-ring profile-ring" style="--score:<%= score !== null ? (score*3.6) + 'deg' : '0deg' %>; --ring-color:<%= color %>;">
+                          <div class="score-ring profile-ring" style="--score:<%= ringScore %>; --ring-color:<%= color %>;">
                             <div class="score-ring__fill"></div>
-                            <div class="score-ring__center"><%= score === null ? '–' : score %></div>
+                            <div class="score-ring__center"><%= ringLabel %></div>
                           </div>
                         </div>
-                        <p class="muted">Uploaded: <%= r.uploadedAt?.toISOString?.().slice(0,10) %></p>
+                        <p class="muted">Uploaded: <%= r.uploadedAt ? r.uploadedAt.toISOString().slice(0,10) : '' %></p>
                         <p class="muted">Size: <%= r.size ? Math.round(r.size/1024) + ' KB' : 'n/a' %></p>
                         <% if (r.fitSummary) { %>
                           <p><strong>Summary:</strong> <%= r.fitSummary %></p>
@@ -71,5 +74,6 @@
             <p class="muted">No resumes uploaded yet.</p>
         <% } %>
     </section>
+    <%- include('partials/footer'); %>
 </body>
 </html>

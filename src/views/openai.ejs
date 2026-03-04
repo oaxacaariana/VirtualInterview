@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Coach | Virtual Interview Simulator</title>
+    <title>AI-Powered Mock Interviewer | Virtual Interview Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/stylesheets/styles.css">
 </head>
 <body>
@@ -13,43 +14,148 @@
             <div class="chat-header">
                 <div>
                     <p class="eyebrow">Simulated interview</p>
-                    <h1>Interview Coach</h1>
+                    <h1>AI-Powered Mock Interviewer</h1>
                     <p class="muted">Focused back-and-forth with a hiring manager persona.</p>
                 </div>
-                <span id="ai-status" class="status-dot">Ready</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" id="context-btn" class="btn-primary" style="padding:8px 16px;">New chat</button>
+                    <span id="ai-status" class="status-dot">Ready</span>
+                </div>
             </div>
 
             <div id="chat-log" class="chat-log"></div>
 
             <form id="ai-form" class="chat-input">
-                <label for="prompt">Your turn</label>
-                <textarea id="prompt" name="prompt" rows="3" placeholder="Type your answer or ask for clarification..."></textarea>
-                <button type="submit" class="btn-primary">Send</button>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <label for="prompt">Your turn</label>
+                    <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End interview</button>
+                </div>
+                <textarea id="prompt" name="prompt" rows="5" maxlength="4000" placeholder="Type your answer or ask for clarification..."></textarea>
+                <button type="submit" id="send-btn" class="btn-primary">Send</button>
             </form>
         </div>
 
         <aside class="feedback-panel">
-            <h3>Review AI (coming soon)</h3>
-            <p class="muted">
-                This panel will show automated critique and scores once the review model is hooked up.
-            </p>
-            <div class="future-note">
-                <h4>Planned</h4>
-                <ul>
-                    <li>Store questions and responses in MongoDB.</li>
-                    <li>Route sessions to a secondary reviewer LLM for scoring.</li>
-                </ul>
+            <h3>Review AI</h3>
+            <div id="analysis-panel" class="analysis-panel">
+                <p class="muted">Click one of your answers to see analysis here. (Coming soon: automated feedback.)</p>
             </div>
         </aside>
     </section>
+
+    <div id="context-modal" class="modal hidden">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3>Interview context</h3>
+                <button id="close-modal" class="btn-primary modal-close-btn" style="padding:8px 16px;">Close</button>
+            </div>
+            <form id="context-form">
+                <label>Target company</label>
+                <input type="text" id="ctx-company" maxlength="200" placeholder="Company name">
+
+                <label>Target role / title</label>
+                <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
+
+                <label>Select resume</label>
+                <div class="resume-card-grid">
+                    <% (resumes || []).forEach(function(r) { %>
+                      <div class="resume-card" data-resume-id="<%= r._id %>">
+                        <div class="resume-card__top">
+                          <h4><%= r.originalName %></h4>
+                          <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
+                            <div class="score-ring__fill"></div>
+                            <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                          </div>
+                        </div>
+                        <p class="muted">Tap to select</p>
+                      </div>
+                    <% }); %>
+                </div>
+                <input type="hidden" id="ctx-resume" value="">
+
+                <button type="submit" class="btn-primary full-width" style="margin-top:14px;">Create new chat</button>
+            </form>
+        </div>
+    </div>
 
     <script>
         const chatLog = document.getElementById('chat-log');
         const form = document.getElementById('ai-form');
         const promptInput = document.getElementById('prompt');
         const statusDot = document.getElementById('ai-status');
+        const contextBtn = document.getElementById('context-btn');
+        const endBtn = document.getElementById('end-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const contextModal = document.getElementById('context-modal');
+        const closeModal = document.getElementById('close-modal');
+        const contextForm = document.getElementById('context-form');
+        const ctxCompany = document.getElementById('ctx-company');
+        const ctxRole = document.getElementById('ctx-role');
+        const ctxResume = document.getElementById('ctx-resume');
+        const resumeCards = document.querySelectorAll('.resume-card');
+        const analysisPanel = document.getElementById('analysis-panel');
 
         const history = [];
+        let context = { company: '', role: '', resumeId: '' };
+        let contextSet = false;
+        let interviewComplete = false;
+        let chatId = '';
+        const STATE_KEY = 'vi_mock_chat_state';
+
+        const newChatId = () => {
+            if (window.crypto?.randomUUID) return crypto.randomUUID();
+            return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        };
+
+        const persistState = () => {
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({ history, context, contextSet, interviewComplete, chatId }));
+            } catch (err) {
+                console.warn('Persist failed', err);
+            }
+        };
+
+        const hydrateState = () => {
+            try {
+                const raw = localStorage.getItem(STATE_KEY);
+                if (!raw) return false;
+                const saved = JSON.parse(raw);
+                chatLog.innerHTML = '';
+                history.length = 0;
+                (saved.history || []).forEach(m => {
+                    addMessage(m.role, m.content);
+                    history.push({ role: m.role, content: m.content });
+                });
+                context = saved.context || context;
+                contextSet = !!saved.contextSet;
+                interviewComplete = !!saved.interviewComplete;
+                chatId = saved.chatId || newChatId();
+
+                ctxCompany.value = context.company || '';
+                ctxRole.value = context.role || '';
+                ctxResume.value = context.resumeId || '';
+                resumeCards.forEach(c => {
+                    if (c.dataset.resumeId === context.resumeId) c.classList.add('selected');
+                });
+
+                if (interviewComplete) {
+                    promptInput.disabled = true;
+                    sendBtn.disabled = true;
+                    endBtn.disabled = true;
+                    document.getElementById('ai-form').classList.add('hidden');
+                    statusDot.textContent = 'Complete';
+                } else {
+                    document.getElementById('ai-form').classList.remove('hidden');
+                    endBtn.disabled = false;
+                    statusDot.textContent = 'Ready';
+                }
+                contextModal.classList.add('hidden');
+                return true;
+            } catch (err) {
+                console.warn('Hydrate failed', err);
+                return false;
+            }
+        };
 
         const addMessage = (role, content) => {
             const bubble = document.createElement('div');
@@ -57,11 +163,36 @@
             bubble.textContent = content;
             chatLog.appendChild(bubble);
             chatLog.scrollTop = chatLog.scrollHeight;
-        };
 
-        const initialMessage = "I'm your hiring manager for this practice session. I'll ask concise, role-specific questions. Ready? First up: tell me about a project you're proud of.";
-        addMessage('assistant', initialMessage);
-        history.push({ role: 'assistant', content: initialMessage });
+            // interactivity
+            if (role === 'assistant') {
+                bubble.title = 'Click to copy';
+                bubble.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(content);
+                        statusDot.textContent = 'Copied!';
+                        setTimeout(() => (statusDot.textContent = 'Ready'), 800);
+                    } catch (err) {
+                        statusDot.textContent = 'Copy failed';
+                        setTimeout(() => (statusDot.textContent = 'Ready'), 800);
+                    }
+                });
+            } else {
+                bubble.title = 'Click to analyze';
+                bubble.addEventListener('click', () => {
+                    analysisPanel.innerHTML = `
+                        <p><strong>Your answer:</strong></p>
+                        <p>${content}</p>
+                        <p class="muted" style="margin-top:8px;">Planned analysis: structure (STAR), clarity, role alignment, and next-question suggestions.</p>
+                        <ul class="muted" style="margin-top:6px;">
+                            <li>Coming soon: automated strengths/risks per turn</li>
+                            <li>Context-aware follow-up prompts</li>
+                            <li>Score per response</li>
+                        </ul>
+                    `;
+                });
+            }
+        };
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -70,8 +201,19 @@
                 return;
             }
 
+            if (!contextSet || !context.company || !context.role || !context.resumeId) {
+                addMessage('assistant', 'Please set company, role, and pick a resume before chatting.');
+                return;
+            }
+
+            if (interviewComplete) {
+                addMessage('assistant', 'Interview is marked complete. Start a new session to continue.');
+                return;
+            }
+
             addMessage('user', prompt);
             history.push({ role: 'user', content: prompt });
+            persistState();
             promptInput.value = '';
 
             statusDot.textContent = 'Thinking...';
@@ -80,25 +222,156 @@
             try {
                 const response = await fetch('/openai/ask', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, transcript: history }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt, transcript: history, interviewComplete, chatId, ...context }),
                 });
 
-                const data = await response.json();
+                const text = await response.text();
+                let data;
+                try { data = JSON.parse(text); } catch { throw new Error(text || 'Non-JSON response'); }
                 if (!response.ok) {
                     throw new Error(data.error || 'Request failed');
                 }
 
                 addMessage('assistant', data.reply);
                 history.push({ role: 'assistant', content: data.reply });
+                chatId = data.chatId || chatId;
+                if (data.interviewComplete) {
+                    interviewComplete = true;
+                    document.getElementById('ai-form').classList.add('hidden');
+                    promptInput.disabled = true;
+                    sendBtn.disabled = true;
+                    endBtn.disabled = true;
+                    statusDot.textContent = 'Complete';
+                    fetch('/openai/close', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId }),
+                    }).catch(() => {});
+                }
+                persistState();
             } catch (error) {
                 addMessage('assistant', `Something went wrong: ${error.message}`);
             } finally {
                 statusDot.textContent = 'Ready';
                 statusDot.classList.remove('active');
+                // no secondary typing text
             }
+        });
+
+        const resetChat = () => {
+            chatLog.innerHTML = '';
+            history.length = 0;
+            context = { company: '', role: '', resumeId: '' };
+            contextSet = false;
+            interviewComplete = false;
+            chatId = '';
+            promptInput.disabled = false;
+            sendBtn.disabled = false;
+            endBtn.disabled = false;
+            document.getElementById('ai-form').classList.remove('hidden');
+            statusDot.textContent = 'Ready';
+            localStorage.removeItem(STATE_KEY);
+                // no secondary typing text
+        };
+
+        const restored = hydrateState();
+        if (!restored) {
+            resetChat();
+            contextModal.classList.remove('hidden');
+        }
+
+        closeModal.addEventListener('click', () => {
+            contextModal.classList.add('hidden');
+        });
+
+        contextForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            context.company = ctxCompany.value.trim();
+            context.role = ctxRole.value.trim();
+            context.resumeId = ctxResume.value;
+            contextSet = !!(context.company && context.role && context.resumeId);
+            if (!chatId) {
+                chatId = newChatId();
+            }
+            persistState();
+            contextModal.classList.add('hidden');
+
+            if (contextSet) {
+                statusDot.textContent = 'Thinking...';
+                statusDot.classList.add('active');
+                // no secondary typing text
+                fetch('/openai/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ ...context, interviewComplete, chatId }),
+                })
+                  .then(async r => {
+                    const text = await r.text();
+                    let data;
+                    try { data = JSON.parse(text); } catch { throw new Error(text || 'Non-JSON response'); }
+                    if (!r.ok) throw new Error(data.error || 'Request failed');
+                    return data;
+                  })
+                  .then(data => {
+                    if (data?.opener) {
+                      addMessage('assistant', data.opener);
+                      history.push({ role: 'assistant', content: data.opener });
+                      chatId = data.chatId || chatId;
+                      persistState();
+                    } else if (data?.error) {
+                      addMessage('assistant', data.error);
+                    }
+                    statusDot.textContent = 'Ready';
+                    statusDot.classList.remove('active');
+                    // no secondary typing text
+                  })
+                  .catch(err => {
+                    addMessage('assistant', `Error preparing interview: ${err.message}`);
+                    statusDot.textContent = 'Ready';
+                    statusDot.classList.remove('active');
+                    // no secondary typing text
+                  });
+            }
+        });
+
+        resumeCards.forEach(card => {
+            card.addEventListener('click', () => {
+                resumeCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                ctxResume.value = card.dataset.resumeId;
+            });
+        });
+
+        contextBtn.addEventListener('click', () => {
+            resetChat();
+            contextModal.classList.remove('hidden');
+        });
+
+        endBtn.addEventListener('click', () => {
+            interviewComplete = true;
+            addMessage('assistant', 'Interview marked complete. Thanks for practicing!');
+            promptInput.disabled = true;
+            sendBtn.disabled = true;
+            endBtn.disabled = true;
+            statusDot.textContent = 'Complete';
+            // no secondary typing text
+            document.getElementById('ai-form').classList.add('hidden');
+            persistState();
+            fetch('/openai/close', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId }),
+            }).catch(() => {});
         });
     </script>
 
+    <%- include('partials/footer'); %>
 </body>
 </html>

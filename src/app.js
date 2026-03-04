@@ -31,6 +31,10 @@ app.use(session({
 // simple auth guard
 const requireAuth = (req, res, next) => {
   if (req.session?.user) return next();
+  const wantsJson = req.headers.accept && req.headers.accept.includes('application/json');
+  if (wantsJson || req.xhr) {
+    return res.status(401).json({ error: 'Authentication required. Please log in.' });
+  }
   return res.redirect('/login');
 };
 

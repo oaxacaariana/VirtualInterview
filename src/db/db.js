@@ -12,6 +12,7 @@ async function connectDb(app) {
   const collections = {
     users: db.collection('users'),
     chatLogs: db.collection('chatLogs'),
+    chatTurns: db.collection('chatTurns'),
     interviewScores: db.collection('interviewScores'),
     resumeScores: db.collection('resumeScores'),
     resumeFiles: db.collection('resumeFiles'),
@@ -22,7 +23,11 @@ async function connectDb(app) {
 
   await Promise.all([
     collections.users.createIndex({ username: 1 }, { unique: true }),
-    collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }),
+    collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }, { name: 'user_transcripts' }),
+    collections.chatLogs.createIndex({ chatId: 1 }, { name: 'chat_lookup' }),
+    collections.chatLogs.createIndex({ sessionId: 1 }, { name: 'session_lookup' }),
+    collections.chatTurns.createIndex({ chatId: 1, turn: 1 }, { name: 'chat_turns' }),
+    collections.chatTurns.createIndex({ userId: 1, createdAt: -1 }, { name: 'user_turns' }),
     collections.interviewScores.createIndex(
       { userId: 1, createdAt: -1 },
       { name: 'user_scores' }
