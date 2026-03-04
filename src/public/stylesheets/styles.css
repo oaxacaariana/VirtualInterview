@@ -32,6 +32,12 @@ body {
     text-decoration: none;
 }
 
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 /* HERO */
 .hero {
     padding: 100px 60px;
@@ -279,4 +285,151 @@ textarea {
 
 .center {
     text-align: center;
+}
+
+
+/**************/
+/* AI COACH   */
+/**************/
+.ai-shell {
+    padding: 60px;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.chat-window {
+    background: #181818;
+    border: 1px solid #202020;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: #9aa;
+    margin-bottom: 6px;
+}
+
+.chat-log {
+    background: #0f0f10;
+    border: 1px solid #1c1c1c;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 320px;
+    max-height: 540px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bubble {
+    max-width: 90%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.bubble.ai {
+    background: #1b1b1b;
+    border: 1px solid rgba(45, 45, 255, 0.35);
+    border-bottom-left-radius: 6px;
+}
+
+.bubble.user {
+    margin-left: auto;
+    background: #2d2dff;
+    color: #fff;
+    border-bottom-right-radius: 6px;
+}
+
+.chat-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-input textarea {
+    background-color: #111;
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 8px;
+    color: #fff;
+    resize: none;
+}
+
+.feedback-panel {
+    background: #181818;
+    border: 1px solid #202020;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: fit-content;
+}
+
+.future-note {
+    background: #111;
+    border: 1px dashed #333;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.future-note ul {
+    list-style: disc;
+    margin-left: 16px;
+    color: #cfcfcf;
+    display: grid;
+    gap: 6px;
+}
+
+.status-dot {
+    background: #1f8b4c;
+    color: #c9ffde;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
+.status-dot.active {
+    background: #cf8b1a;
+    color: #fff5d7;
+}
+
+.muted {
+    color: #b1b1b1;
+}
+
+@media (max-width: 900px) {
+    .ai-shell {
+        grid-template-columns: 1fr;
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .hero, .features, .how-it-works, .footer1, .ai-shell {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
 }

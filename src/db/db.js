@@ -1,0 +1,52 @@
+const { MongoClient } = require('mongodb');
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const MONGODB_DB = process.env.MONGODB_DB || 'virtual_interview';
+
+const client = new MongoClient(MONGODB_URI);
+
+async function connectDb(app) {
+  await client.connect();
+  const db = client.db(MONGODB_DB);
+
+  const collections = {
+    users: db.collection('users'),
+    chatLogs: db.collection('chatLogs'),
+    interviewScores: db.collection('interviewScores'),
+    resumeScores: db.collection('resumeScores'),
+    resumeFiles: db.collection('resumeFiles'),
+  };
+
+  app.locals.db = db;
+  app.locals.collections = collections;
+
+  await Promise.all([
+    collections.users.createIndex({ email: 1 }, { unique: true }),
+    collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }),
+    collections.interviewScores.createIndex(
+      { userId: 1, createdAt: -1 },
+      { name: 'user_scores' }
+    ),
+    collections.resumeScores.createIndex(
+      { userId: 1, createdAt: -1 },
+      { name: 'user_resume_scores' }
+    ),
+    collections.resumeFiles.createIndex(
+      { userId: 1, uploadedAt: -1 },
+      { name: 'user_resume_files' }
+    ),
+  ]);
+
+  return { client, db, collections };
+}
+
+async function closeDb() {
+  await client.close();
+}
+
+module.exports = {
+  connectDb,
+  closeDb,
+  MONGODB_URI,
+  MONGODB_DB,
+};

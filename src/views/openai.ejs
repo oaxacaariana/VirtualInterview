@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Coach | Virtual Interview Simulator</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">Virtual Interview Simulator</div>
+        <div class="nav-links">
+            <a href="/" class="btn-outline">Home</a>
+            <a href="/upload" class="btn-outline">Upload</a>
+            <a href="/openai" class="btn-primary">AI Coach</a>
+        </div>
+    </nav>
+
+    <section class="ai-shell">
+        <div class="chat-window">
+            <div class="chat-header">
+                <div>
+                    <p class="eyebrow">Simulated interview</p>
+                    <h1>Interview Coach</h1>
+                    <p class="muted">Focused back-and-forth with a hiring manager persona.</p>
+                </div>
+                <span id="ai-status" class="status-dot">Ready</span>
+            </div>
+
+            <div id="chat-log" class="chat-log"></div>
+
+            <form id="ai-form" class="chat-input">
+                <label for="prompt">Your turn</label>
+                <textarea id="prompt" name="prompt" rows="3" placeholder="Type your answer or ask for clarification..."></textarea>
+                <button type="submit" class="btn-primary">Send</button>
+            </form>
+        </div>
+
+        <aside class="feedback-panel">
+            <h3>Review AI (coming soon)</h3>
+            <p class="muted">
+                This panel will show automated critique and scores once the review model is hooked up.
+            </p>
+            <div class="future-note">
+                <h4>Planned</h4>
+                <ul>
+                    <li>Store questions and responses in MongoDB.</li>
+                    <li>Route sessions to a secondary reviewer LLM for scoring.</li>
+                </ul>
+            </div>
+        </aside>
+    </section>
+
+    <script>
+        const chatLog = document.getElementById('chat-log');
+        const form = document.getElementById('ai-form');
+        const promptInput = document.getElementById('prompt');
+        const statusDot = document.getElementById('ai-status');
+
+        const history = [];
+
+        const addMessage = (role, content) => {
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${role === 'user' ? 'user' : 'ai'}`;
+            bubble.textContent = content;
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        };
+
+        const initialMessage = "I'm your hiring manager for this practice session. I'll ask concise, role-specific questions. Ready? First up: tell me about a project you're proud of.";
+        addMessage('assistant', initialMessage);
+        history.push({ role: 'assistant', content: initialMessage });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const prompt = (promptInput.value || '').trim();
+            if (!prompt) {
+                return;
+            }
+
+            addMessage('user', prompt);
+            history.push({ role: 'user', content: prompt });
+            promptInput.value = '';
+
+            statusDot.textContent = 'Thinking...';
+            statusDot.classList.add('active');
+
+            try {
+                const response = await fetch('/openai/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, transcript: history }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Request failed');
+                }
+
+                addMessage('assistant', data.reply);
+                history.push({ role: 'assistant', content: data.reply });
+            } catch (error) {
+                addMessage('assistant', `Something went wrong: ${error.message}`);
+            } finally {
+                statusDot.textContent = 'Ready';
+                statusDot.classList.remove('active');
+            }
+        });
+    </script>
+
+</body>
+</html>

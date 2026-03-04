@@ -6,6 +6,7 @@ const app = express();
 const uploadRouter = require('./routes/upload');
 const homeRouter = require('./routes/home');
 const resultsRouter = require('./routes/results');
+const openaiRouter = require('./routes/openai');
 
 // creates the uploads folder if it doesn't exist for the user yet
 if (!fs.existsSync('uploads')) {
@@ -18,6 +19,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use('/', homeRouter);
+app.use('/openai', openaiRouter);
 app.use('/upload', uploadRouter);
 app.use('/results', resultsRouter);
 
