@@ -2,6 +2,7 @@ const fs = require('fs');
 const OpenAI = require('openai');
 const { ObjectId } = require('mongodb');
 const { buildResumeFile } = require('../db/persistence');
+const { parseResumeToText } = require('../utils/resumeParser');
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.MODEL || 'gpt-4.1-mini';
@@ -10,12 +11,13 @@ const showUploadPage = (req, res) => {
   res.render('upload'); 
 };
 
-const readResumeText = (filePath) => {
+// TODO: replace this stub with a real PDF/DOCX parser (e.g., pdf-parse / mammoth) and
+// persist the parsed text into resumeFiles for preview + scoring.
+const readResumeText = async (filePath) => {
   try {
-    const raw = fs.readFileSync(filePath);
-    return raw.toString('utf8').slice(0, 8000);
+    return (await parseResumeToText(filePath)).slice(0, 8000);
   } catch (error) {
-    console.error('Unable to read resume file:', error);
+    console.error('Unable to parse resume file:', error);
     return '';
   }
 };
@@ -73,6 +75,7 @@ const handleUpload = async (req, res) => {
     path: req.file.path,
     size: req.file.size,
     mimeType: req.file.mimetype,
+    // TODO: add parsedText field once resume parser is integrated
   });
 
   let resumeId = null;
@@ -95,7 +98,7 @@ const handleUpload = async (req, res) => {
     negatives.push('OPENAI_API_KEY missing; cannot generate LLM score.');
   } else {
     try {
-      const resumeText = readResumeText(resumeDoc.path);
+      const resumeText = await readResumeText(resumeDoc.path);
       const assessment = await getFitAssessment({ resumeText, jobDescription, company });
       if (assessment) {
         fitScore = assessment.fit_score ?? fitScore;
@@ -122,8 +125,6 @@ const handleUpload = async (req, res) => {
   });
 };
 
-module.exports = { showUploadPage, handleUpload };
- 
 // Debug helper: view stored resume text by resumeId
 const viewResume = async (req, res) => {
   const { id } = req.params;
@@ -146,10 +147,39 @@ const viewResume = async (req, res) => {
   }
 
   try {
-    const raw = fs.readFileSync(doc.path);
-    res.type('text/plain').send(raw.toString('utf8'));
+    const parsed = await parseResumeToText(doc.path);
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Resume Preview</title>
+        <style>
+          body { font-family: Arial, sans-serif; background: #0f0f10; color: #e5e5e5; padding: 24px; }
+          .card { background: #181818; border: 1px solid #222; border-radius: 10px; padding: 16px; max-width: 900px; }
+          pre { white-space: pre-wrap; background: #0f0f10; border: 1px solid #222; padding: 12px; border-radius: 8px; }
+          .meta { margin-bottom: 14px; line-height: 1.5; }
+          .muted { color: #aaa; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>Stored Resume Preview</h1>
+          <div class="meta">
+            <div><strong>Original Name:</strong> ${doc.originalName || 'n/a'}</div>
+            <div><strong>MIME Type:</strong> ${doc.mimeType || 'n/a'}</div>
+            <div><strong>Size:</strong> ${doc.size ? Math.round(doc.size / 1024) + ' KB' : 'n/a'}</div>
+            <div><strong>Stored Path:</strong> ${doc.path || 'n/a'}</div>
+            <div class="muted">Note: Files are stored on disk; Mongo holds metadata and (soon) parsed text.</div>
+          </div>
+          <h3>Extracted Text (best-effort)</h3>
+          <pre>${parsed || 'No text extracted from resume (parser stub).'} </pre>
+        </div>
+      </body>
+      </html>
+    `;
+    res.type('text/html').send(html);
   } catch (error) {
-    console.error('Failed to read resume file:', error);
+    console.error('Failed to read/parse resume file:', error);
     res.status(500).send('Could not read stored resume file.');
   }
 };

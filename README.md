@@ -33,8 +33,9 @@ A small Express/EJS prototype for uploading resumes, previewing them, and wiring
 ## TODO (PDF parser + scoring)
 - Implement real resume text extraction in `src/utils/resumeParser.js` (replace the stub with `pdf-parse` or similar).
 - Store extracted text alongside metadata (or instead of the raw file) once parsing works.
-- Update preview endpoint to show parsed text and fail gracefully on binary-only content.
+- Update preview endpoint (`GET /upload/preview/:id`) to show parsed text and fail gracefully on binary-only content.
 - Re-enable LLM fit scoring using extracted resume text + job description.
+- Remove temporary fallbacks in `uploadController.js` once parser is in place.
 
 ## Notes
 - Keep `.env` out of version control.

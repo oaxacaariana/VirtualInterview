@@ -59,6 +59,7 @@ const buildResumeFile = ({
   path,
   size,
   mimeType,
+  // TODO: add parsedText once resume parser is implemented
   uploadedAt: new Date(),
 });
 
