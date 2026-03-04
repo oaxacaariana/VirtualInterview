@@ -33,7 +33,7 @@ A small Express/EJS prototype for uploading resumes, previewing them, and wiring
 ## TODO (PDF parser + scoring)
 - Implement real resume text extraction in `src/utils/resumeParser.js` (keep stub; teammate’s parser will drop in) and store parsed text.
 - Update preview endpoint (`GET /upload/preview/:id`) to show parsed text and fail gracefully on binary-only content.
-- Keep LLM fit scoring tied to parsed resume text + full job description (4000-char input, 700-char display).
+- Integrate LLM-driven interview question responses and analysis, including UI for displaying feedback and comments.
 - Persist interview/chat logs and surface richer history views.
 - Expand interview chat prompt diversity: more variable behaviors, probing, and role-specific nuances.
 - Add interview history UI and question/response analysis display (per-turn and overall).
