@@ -3,9 +3,10 @@
  * but provide a consistent shape for future persistence.
  */
 
-const buildUser = ({ email, name, role = 'candidate' }) => ({
-  email: email?.toLowerCase(),
+const buildUser = ({ username, name, passwordHash, role = 'candidate' }) => ({
+  username: username?.toLowerCase(),
   name,
+  passwordHash,
   role,
   createdAt: new Date(),
 });
@@ -37,11 +38,24 @@ const buildInterviewScore = ({
   createdAt: new Date(),
 });
 
-const buildResumeScore = ({ userId = null, resumeId, score, summary }) => ({
+const buildResumeScore = ({
+  userId = null,
+  resumeId,
+  score,
+  summary,
+  positives = [],
+  negatives = [],
+  company = '',
+  jobSnippet = '',
+}) => ({
   userId,
   resumeId,
   score,
   summary,
+  positives,
+  negatives,
+  company,
+  jobSnippet,
   createdAt: new Date(),
 });
 

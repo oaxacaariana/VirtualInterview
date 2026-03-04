@@ -1,0 +1,16 @@
+<nav class="navbar">
+    <div class="logo">Virtual Interview Simulator</div>
+    <div class="nav-links">
+        <% if (currentUser) { %>
+            <span class="nav-user">Hi, <%= currentUser.name || currentUser.username %></span>
+            <% if (activePath !== '/') { %><a href="/" class="btn-outline">Home</a><% } %>
+            <% if (activePath !== '/profile') { %><a href="/profile" class="btn-outline">Profile</a><% } %>
+            <% if (activePath !== '/upload') { %><a href="/upload" class="btn-outline">Upload</a><% } %>
+            <% if (activePath !== '/openai') { %><a href="/openai" class="btn-primary">AI Coach</a><% } %>
+        <% } else { %>
+            <% if (activePath !== '/') { %><a href="/" class="btn-outline">Home</a><% } %>
+            <% if (activePath !== '/login') { %><a href="/login" class="btn-outline">Login</a><% } %>
+            <% if (activePath !== '/signup') { %><a href="/signup" class="btn-primary">Sign Up</a><% } %>
+        <% } %>
+    </div>
+</nav>

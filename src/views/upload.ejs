@@ -6,20 +6,14 @@
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="logo">Virtual Interview Simulator</div>
-    <div class="nav-links">
-        <a href="/" class="btn-outline">Home</a>
-        <a href="/openai" class="btn-outline">AI Coach</a>
-    </div>
-</nav>
+<%- include('partials/navbar'); %>
 
 <section class="form-section">
     <div class="form-container">
-        <h1>Start Your Mock Interview</h1>
+        <h1>Score Your Resume</h1>
         <p class="form-subtext">
-            Upload your resume and provide the job description and company name.
-            We will generate a personalized interview experience for you!
+            Upload your PDF resume with the job description and company name.
+            We’ll generate a fit score and targeted feedback for that role.
         </p>
 
         <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -31,14 +25,31 @@
             <input type="text" name="company" placeholder="e.g., Google, Deloitte..." required>
 
             <label>Job Description</label>
-            <textarea name="jobDescription" rows="6" placeholder="Paste job description here..." required></textarea>
+            <textarea name="jobDescription" rows="8" maxlength="4000" placeholder="Paste job description here (up to 4000 characters)..." required></textarea>
 
-            <button type="submit" class="btn-primary full-width">
-                Generate Interview
+            <button id="upload-submit" type="submit" class="btn-primary full-width">
+                Upload Resume
             </button>
         </form>
     </div>
 </section>
+
+<div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loader"></div>
+    <p>Scoring your resume…</p>
+</div>
+
+<script>
+    const uploadForm = document.querySelector('form');
+    const overlay = document.getElementById('loading-overlay');
+    const submitBtn = document.getElementById('upload-submit');
+
+    uploadForm.addEventListener('submit', () => {
+        overlay.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+    });
+</script>
 
 </body>
 </html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile | Virtual Interview</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="form-section" style="padding-top:40px;">
+        <div class="form-container">
+            <h1>Your Profile</h1>
+            <p class="form-subtext">Update your display name or password.</p>
+            <% if (error) { %><p style="color:#f88;"><%= error %></p><% } %>
+            <% if (success) { %><p style="color:#6f6;"><%= success %></p><% } %>
+            <form action="/profile" method="POST">
+                <label>Username</label>
+                <input type="text" value="<%= user?.username %>" disabled>
+
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Your name" value="<%= user?.name || '' %>">
+
+                <label>New Password (leave blank to keep current)</label>
+                <input type="password" name="password" placeholder="********">
+
+                <button type="submit" class="btn-primary full-width">Save Changes</button>
+            </form>
+
+            <form action="/logout" method="POST" style="margin-top:16px;">
+                <button type="submit" class="btn-danger full-width">Logout</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="results-section" style="padding-top:20px;">
+        <h2>Your Uploaded Resumes</h2>
+        <% if (resumes && resumes.length) { %>
+            <div class="feedback-grid profile-resume-grid">
+                <% resumes.forEach(r => { 
+                    const score = typeof r.fitScore === 'number' ? r.fitScore : null;
+                    const color = score === null
+                      ? '#555'
+                      : (score <= 20 ? '#d64545'
+                      : score <= 50 ? '#f0a202'
+                      : score <= 75 ? '#8ac12f'
+                      : '#3fc26c');
+                %>
+                    <div class="feedback-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <h3><%= r.originalName %></h3>
+                          <div class="score-ring profile-ring" style="--score:<%= score !== null ? (score*3.6) + 'deg' : '0deg' %>; --ring-color:<%= color %>;">
+                            <div class="score-ring__fill"></div>
+                            <div class="score-ring__center"><%= score === null ? '–' : score %></div>
+                          </div>
+                        </div>
+                        <p class="muted">Uploaded: <%= r.uploadedAt?.toISOString?.().slice(0,10) %></p>
+                        <p class="muted">Size: <%= r.size ? Math.round(r.size/1024) + ' KB' : 'n/a' %></p>
+                        <% if (r.fitSummary) { %>
+                          <p><strong>Summary:</strong> <%= r.fitSummary %></p>
+                        <% } %>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                          <a href="/upload/preview/<%= r._id %>" class="btn-outline" target="_blank">Preview Text</a>
+                          <% if (r.fitScore !== undefined) { %>
+                            <a href="/results?resumeId=<%= r._id %>" class="btn-outline">View Score</a>
+                          <% } %>
+                        </div>
+                      </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <p class="muted">No resumes uploaded yet.</p>
+        <% } %>
+    </section>
+</body>
+</html>

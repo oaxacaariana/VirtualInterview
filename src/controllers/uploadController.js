@@ -1,7 +1,7 @@
 const fs = require('fs');
 const OpenAI = require('openai');
 const { ObjectId } = require('mongodb');
-const { buildResumeFile } = require('../db/persistence');
+const { buildResumeFile, buildResumeScore } = require('../db/persistence');
 const { parseResumeToText } = require('../utils/resumeParser');
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -53,6 +53,17 @@ const getFitAssessment = async ({ resumeText, jobDescription, company }) => {
 
 const handleUpload = async (req, res) => {
   const { company = '', jobDescription = '' } = req.body || {};
+  const jobDescForLLM = jobDescription.slice(0, 4000); // allow longer input for scoring
+  const jobDescForDisplay = jobDescription.slice(0, 700); // keep display concise
+  const userObjectId = req.session?.user?.id ? new ObjectId(req.session.user.id) : null;
+
+  const ringColorForScore = (score) => {
+    if (typeof score !== 'number') return '#555';
+    if (score <= 20) return '#d64545';
+    if (score <= 50) return '#f0a202';
+    if (score <= 75) return '#8ac12f';
+    return '#3fc26c';
+  };
 
   if (!req.file) {
     return res.status(400).render('results', {
@@ -69,7 +80,7 @@ const handleUpload = async (req, res) => {
   }
 
   const resumeDoc = buildResumeFile({
-    userId: null, // TODO: attach authenticated user id when auth is added
+    userId: userObjectId,
     originalName: req.file.originalname,
     storedName: req.file.filename,
     path: req.file.path,
@@ -99,7 +110,7 @@ const handleUpload = async (req, res) => {
   } else {
     try {
       const resumeText = await readResumeText(resumeDoc.path);
-      const assessment = await getFitAssessment({ resumeText, jobDescription, company });
+      const assessment = await getFitAssessment({ resumeText, jobDescription: jobDescForLLM, company });
       if (assessment) {
         fitScore = assessment.fit_score ?? fitScore;
         positives = assessment.positives || positives;
@@ -112,13 +123,33 @@ const handleUpload = async (req, res) => {
     }
   }
 
+  // persist fit score to resumeScores collection
+  try {
+    if (resumeId && req.app.locals.collections?.resumeScores) {
+      const scoreDoc = buildResumeScore({
+        userId: userObjectId,
+        resumeId,
+        score: fitScore,
+        summary,
+        positives,
+        negatives,
+        company,
+        jobSnippet: jobDescForDisplay,
+      });
+      await req.app.locals.collections.resumeScores.insertOne(scoreDoc);
+    }
+  } catch (err) {
+    console.warn('Failed to persist fit score:', err.message);
+  }
+
   res.render('results', {
     fitScore,
+    ringColor: ringColorForScore(fitScore),
     positives,
     negatives,
     summary,
     company,
-    jobSnippet: jobDescription.slice(0, 700),
+    jobSnippet: jobDescForDisplay,
     resumeName: resumeDoc.originalName,
     resumeSizeKb: Math.max(1, Math.round(resumeDoc.size / 1024)),
     resumeId,

@@ -1,4 +1,6 @@
 const OpenAI = require('openai');
+const { buildChatLog } = require('../db/persistence');
+const { ObjectId } = require('mongodb');
 
 const model = process.env.MODEL || 'gpt-4.1-mini';
 let client;
@@ -59,8 +61,31 @@ const askOpenAI = async (req, res) => {
       completion.choices?.[0]?.message?.content?.trim() ||
       'No response received. Try again with a different prompt.';
 
-    // TODO: persist chat turns to Mongo using req.app.locals.collections.chatLogs
-    // once storage and session management are enabled.
+    // persist chat log with userId when available
+    try {
+      const chatLogs = req.app.locals.collections?.chatLogs;
+      if (chatLogs) {
+        const userId =
+          (req.session?.user?.id && new ObjectId(req.session.user.id)) ||
+          null;
+
+        const log = buildChatLog({
+          userId,
+          sessionId: req.sessionID,
+          model,
+          messages: [
+            ...transcript,
+            { role: 'user', content: prompt.trim(), at: new Date() },
+            { role: 'assistant', content: reply, at: new Date() },
+          ],
+        });
+
+        await chatLogs.insertOne(log);
+      }
+    } catch (err) {
+      console.warn('Failed to persist chat log:', err.message);
+    }
+
     // TODO: forward completed exchanges to a secondary review AI for critique/scoring.
 
     res.json({

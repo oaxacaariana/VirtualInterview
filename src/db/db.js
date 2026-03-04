@@ -21,7 +21,7 @@ async function connectDb(app) {
   app.locals.collections = collections;
 
   await Promise.all([
-    collections.users.createIndex({ email: 1 }, { unique: true }),
+    collections.users.createIndex({ username: 1 }, { unique: true }),
     collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }),
     collections.interviewScores.createIndex(
       { userId: 1, createdAt: -1 },

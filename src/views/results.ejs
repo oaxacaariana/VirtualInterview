@@ -6,21 +6,16 @@
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="logo">Virtual Interview Simulator</div>
-    <div class="nav-links">
-        <a href="/" class="btn-outline">Home</a>
-        <a href="/openai" class="btn-outline">AI Coach</a>
-    </div>
-</nav>
+<%- include('partials/navbar'); %>
 
 <section class="results-section">
     <h1>Role Fit Assessment</h1>
 
     <div class="score-card">
         <h2>Fit Score</h2>
-        <div class="score-circle">
-           <%= typeof fitScore === 'number' ? fitScore + '%' : fitScore %>
+        <div class="score-ring results-ring" style="--score:<%= typeof fitScore === 'number' ? (fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= ringColor %>; width:160px; height:160px;">
+            <div class="score-ring__fill"></div>
+            <div class="score-ring__center" style="font-size:1.4rem;"><%= typeof fitScore === 'number' ? fitScore : '–' %></div>
         </div>
         <p class="muted">
             Based on your resume (<%= resumeName %>) and the job description<% if (company) { %> at <%= company %><% } %>.
@@ -66,6 +61,9 @@
             <p><strong>Resume:</strong> <%= resumeName %> (<%= resumeSizeKb ? resumeSizeKb + ' KB' : 'size n/a' %>)</p>
             <% if (resumeId) { %>
                 <p><strong>Resume ID:</strong> <%= resumeId %></p>
+                <div style="margin-top:10px;">
+                    <a class="btn-outline" href="/upload/preview/<%= resumeId %>" target="_blank">View Resume</a>
+                </div>
             <% } %>
         </div>
 
