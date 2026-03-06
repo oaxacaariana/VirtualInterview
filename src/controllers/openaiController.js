@@ -1,9 +1,8 @@
 const OpenAI = require('openai');
-const fs = require('fs');
 const { buildChatLog, buildChatTurn } = require('../db/persistence');
 const { ObjectId } = require('mongodb');
 const { parseResumeToText } = require('../utils/resumeParser');
-const fetch = require('node-fetch');
+const { runWebResearch } = require('../utils/webResearch');
 
 const model = process.env.MODEL || 'gpt-4.1-mini';
 let client;
@@ -81,34 +80,14 @@ const buildBackgroundDoc = ({ resumeText, company, role, researchSummary }) => {
     `target_company=${company || 'unspecified'}`,
     `target_role=${role || 'unspecified'}`,
     `resume_highlights=${resumeText ? resumeText.slice(0, 1200) : 'not provided'}`,
-    `research_notes=${researchSummary || 'web research not yet implemented; placeholder only.'}`,
+    `research_notes=${researchSummary || 'none found'}`,
     `flow=intro, tailored questions (resume+company+role), 1-2 generic staples, wrap-up`,
   ].join(', ');
 };
 
-const fetchWebResearch = async ({ company, role }) => {
-  const endpoint = process.env.WEB_SEARCH_ENDPOINT;
-  const key = process.env.WEB_SEARCH_KEY;
-  if (!endpoint || !key) return '';
-
-  const query = `${company || ''} ${role || ''} interview questions requirements`.trim();
-  const url = `${endpoint}?q=${encodeURIComponent(query)}&count=5`;
-  try {
-    const resp = await fetch(url, { headers: { 'Ocp-Apim-Subscription-Key': key } });
-    if (!resp.ok) throw new Error(`status ${resp.status}`);
-    const json = await resp.json();
-    if (json?.value && Array.isArray(json.value)) {
-      return json.value
-        .map((r) => r.name || r.title || '')
-        .filter(Boolean)
-        .slice(0, 5)
-        .join('; ');
-    }
-    return '';
-  } catch (err) {
-    console.warn('web research failed:', err.message);
-    return '';
-  }
+const fetchWebResearch = async ({ company, role, openaiClient }) => {
+  const { summary } = await runWebResearch({ client: openaiClient, company, role });
+  return summary;
 };
 
 const generateBackgroundNote = async ({ openaiClient, resumeText, company, role, webSignals }) => {
@@ -182,7 +161,7 @@ const askOpenAI = async (req, res) => {
     }
   }
 
-  const webSignals = await fetchWebResearch({ company, role });
+  const webSignals = await fetchWebResearch({ company, role, openaiClient });
   const researchNote = await generateBackgroundNote({
     openaiClient,
     resumeText,
@@ -366,7 +345,7 @@ const startInterview = async (req, res) => {
     console.warn('Failed to load resume for startInterview:', err.message);
   }
 
-  const webSignals = await fetchWebResearch({ company, role });
+  const webSignals = await fetchWebResearch({ company, role, openaiClient });
   const researchNote = await generateBackgroundNote({
     openaiClient,
     resumeText,

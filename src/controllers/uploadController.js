@@ -1,8 +1,8 @@
-const fs = require('fs');
 const OpenAI = require('openai');
 const { ObjectId } = require('mongodb');
 const { buildResumeFile, buildResumeScore } = require('../db/persistence');
 const { parseResumeToText } = require('../utils/resumeParser');
+const { runWebResearch } = require('../utils/webResearch');
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.MODEL || 'gpt-4.1-mini';
@@ -22,7 +22,13 @@ const readResumeText = async (filePath) => {
   }
 };
 
-const getFitAssessment = async ({ resumeText, jobDescription, company }) => {
+const inferRoleFromJobDescription = (desc) => {
+  if (!desc) return '';
+  const firstLine = desc.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+  return firstLine.trim().slice(0, 120);
+};
+
+const getFitAssessment = async ({ resumeText, jobDescription, company, webResearch }) => {
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.4,
@@ -35,6 +41,7 @@ const getFitAssessment = async ({ resumeText, jobDescription, company }) => {
           'Review the candidate resume and job description. Return strict JSON with keys: ' +
           'fit_score (0-100 number), positives (array of strings), negatives (array of strings), summary (2-3 sentences referencing resume specifics). ' +
           'Base the assessment only on the provided resume and job description.' +
+          `Use these web research cues for context: ${webResearch || 'none available'}. ` +
           'If information is missing, note that in the negatives. Be concise and specific.' +
           'Example response: {"fit_score": 85, "positives": ["Strong experience with JavaScript and React.", "Led a team of 5 engineers."], "negatives": ["Job description mentions Python, which is not in the resume.", "Resume does not specify years of experience."], "summary": "The candidate has strong frontend experience relevant to the role, but lacks Python skills mentioned in the job description. Clarification on years of experience would be helpful."}' +
           'If the resume text is unreadable or missing, return fit_score of 0 and note the issue in negatives.'
@@ -42,7 +49,11 @@ const getFitAssessment = async ({ resumeText, jobDescription, company }) => {
       },
       {
         role: 'user',
-        content: `Job description:\n${jobDescription || 'N/A'}\n\nResume:\n${resumeText || 'Resume text unavailable.'}`,
+        content: [
+          `Job description:\n${jobDescription || 'N/A'}`,
+          `Company/role web research:\n${webResearch || 'No external signals found.'}`,
+          `Resume:\n${resumeText || 'Resume text unavailable.'}`,
+        ].join('\n\n'),
       },
     ],
   });
@@ -56,6 +67,7 @@ const handleUpload = async (req, res) => {
   const jobDescForLLM = jobDescription.slice(0, 4000); // allow longer input for scoring
   const jobDescForDisplay = jobDescription.slice(0, 700); // keep display concise
   const userObjectId = req.session?.user?.id ? new ObjectId(req.session.user.id) : null;
+  const inferredRole = inferRoleFromJobDescription(jobDescription);
 
   const ringColorForScore = (score) => {
     if (typeof score !== 'number') return '#555';
@@ -104,13 +116,25 @@ const handleUpload = async (req, res) => {
   let positives = [];
   let negatives = [];
   let summary = '';
+  let webResearchSummary = '';
 
   if (!process.env.OPENAI_API_KEY) {
     negatives.push('OPENAI_API_KEY missing; cannot generate LLM score.');
   } else {
     try {
       const resumeText = await readResumeText(resumeDoc.path);
-      const assessment = await getFitAssessment({ resumeText, jobDescription: jobDescForLLM, company });
+      const { summary: webSummary } = await runWebResearch({
+        client,
+        company,
+        role: inferredRole,
+      });
+      webResearchSummary = webSummary || '';
+      const assessment = await getFitAssessment({
+        resumeText,
+        jobDescription: jobDescForLLM,
+        company,
+        webResearch: webResearchSummary,
+      });
       if (assessment) {
         fitScore = assessment.fit_score ?? fitScore;
         positives = assessment.positives || positives;
