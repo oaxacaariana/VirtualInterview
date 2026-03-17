@@ -3,6 +3,7 @@ const { ObjectId } = require('mongodb');
 const { buildResumeFile, buildResumeScore } = require('../db/persistence');
 const { parseResumeToText } = require('../utils/resumeParser');
 const { runWebResearch } = require('../utils/webResearch');
+const { ringColorForScore } = require('../utils/scoreColors');
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.MODEL || 'gpt-4.1-mini';
@@ -28,6 +29,12 @@ const inferRoleFromJobDescription = (desc) => {
   return firstLine.trim().slice(0, 120);
 };
 
+const clampScore = (value, max) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.min(Math.max(Math.round(num), 0), max);
+};
+
 const getFitAssessment = async ({ resumeText, jobDescription, company, webResearch }) => {
   const completion = await client.chat.completions.create({
     model,
@@ -36,16 +43,18 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
     messages: [
       {
         role: 'system',
-        content:
-          `You are a hiring manager at ${company || 'the target company'}. ` +
-          'Review the candidate resume and job description. Return strict JSON with keys: ' +
-          'fit_score (0-100 number), positives (array of strings), negatives (array of strings), summary (2-3 sentences referencing resume specifics). ' +
-          'Base the assessment only on the provided resume and job description.' +
-          `Use these web research cues for context: ${webResearch || 'none available'}. ` +
-          'If information is missing, note that in the negatives. Be concise and specific.' +
-          'Example response: {"fit_score": 85, "positives": ["Strong experience with JavaScript and React.", "Led a team of 5 engineers."], "negatives": ["Job description mentions Python, which is not in the resume.", "Resume does not specify years of experience."], "summary": "The candidate has strong frontend experience relevant to the role, but lacks Python skills mentioned in the job description. Clarification on years of experience would be helpful."}' +
-          'If the resume text is unreadable or missing, return fit_score of 0 and note the issue in negatives.'
-
+        content: [
+          `You are a hiring manager at ${company || 'the target company'}.`,
+          'Analyze how well the candidate fits the specific company and job.',
+          "Compare the candidate's skills, experience, education, and achievements against the job description and inferred company expectations.",
+          'Return JSON only (no prose) with keys and ranges:',
+          'title, skills_alignment (0-30), experience_relevance (0-25), education_certifications (0-15), role_keywords (0-15), achievements_impact (0-15), compatibility_score (0-100), positives (array of strengths), negatives (array of risks/gaps), summary (2-3 concise sentences).',
+          'For education_certifications: grant full points when the job description states "no degree required", "degree optional", or prefers experience over formal education, unless the resume explicitly conflicts (e.g., lacks a required certification that IS specified). Do not penalize missing degrees when the posting says it is not required.',
+          'compatibility_score must equal the sum of the five components, capped at 100. Make sure math is correct.',
+          'If resume or job description is missing/unreadable, set all numeric values to 0 and explain in negatives.',
+          `Use these web research cues for context: ${webResearch || 'none available'}.`,
+          'Do not add sentences, explanations, or extra keys outside the JSON.'
+        ].join(' '),
       },
       {
         role: 'user',
@@ -59,7 +68,36 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
   });
 
   const content = completion.choices?.[0]?.message?.content;
-  return content ? JSON.parse(content) : null;
+  if (!content) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (err) {
+    console.warn('Failed to parse assessment JSON:', err.message);
+    return null;
+  }
+
+  const breakdown = {
+    skills_alignment: clampScore(parsed.skills_alignment, 30),
+    experience_relevance: clampScore(parsed.experience_relevance, 25),
+    education_certifications: clampScore(parsed.education_certifications, 15),
+    role_keywords: clampScore(parsed.role_keywords, 15),
+    achievements_impact: clampScore(parsed.achievements_impact, 15),
+  };
+
+  const computedTotal = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
+  const compatibility_score = Math.min(100, computedTotal);
+  const title = (parsed.title || 'Compatibility Score').toString().trim() || 'Compatibility Score';
+
+  return {
+    title,
+    compatibility_score,
+    breakdown,
+    positives: Array.isArray(parsed.positives) ? parsed.positives.filter(Boolean) : [],
+    negatives: Array.isArray(parsed.negatives) ? parsed.negatives.filter(Boolean) : [],
+    summary: parsed.summary ? parsed.summary.toString().trim() : '',
+  };
 };
 
 const handleUpload = async (req, res) => {
@@ -68,14 +106,6 @@ const handleUpload = async (req, res) => {
   const jobDescForDisplay = jobDescription.slice(0, 700); // keep display concise
   const userObjectId = req.session?.user?.id ? new ObjectId(req.session.user.id) : null;
   const inferredRole = inferRoleFromJobDescription(jobDescription);
-
-  const ringColorForScore = (score) => {
-    if (typeof score !== 'number') return '#555';
-    if (score <= 20) return '#d64545';
-    if (score <= 50) return '#f0a202';
-    if (score <= 75) return '#8ac12f';
-    return '#3fc26c';
-  };
 
   if (!req.file) {
     return res.status(400).render('results', {
@@ -88,6 +118,9 @@ const handleUpload = async (req, res) => {
       resumeName: 'Not provided',
       resumeSizeKb: null,
       resumeId: null,
+      scoreBreakdown: null,
+      scoreTitle: 'Compatibility Score',
+      ringColor: ringColorForScore(null),
     });
   }
 
@@ -113,6 +146,8 @@ const handleUpload = async (req, res) => {
   }
 
   let fitScore = 'Pending';
+  let scoreBreakdown = null;
+  let scoreTitle = 'Compatibility Score';
   let positives = [];
   let negatives = [];
   let summary = '';
@@ -136,7 +171,9 @@ const handleUpload = async (req, res) => {
         webResearch: webResearchSummary,
       });
       if (assessment) {
-        fitScore = assessment.fit_score ?? fitScore;
+        fitScore = assessment.compatibility_score ?? fitScore;
+        scoreBreakdown = assessment.breakdown || scoreBreakdown;
+        scoreTitle = assessment.title || scoreTitle;
         positives = assessment.positives || positives;
         negatives = assessment.negatives || negatives;
         summary = assessment.summary || summary;
@@ -154,6 +191,8 @@ const handleUpload = async (req, res) => {
         userId: userObjectId,
         resumeId,
         score: fitScore,
+        rubric: scoreBreakdown,
+        title: scoreTitle,
         summary,
         positives,
         negatives,
@@ -177,6 +216,8 @@ const handleUpload = async (req, res) => {
     resumeName: resumeDoc.originalName,
     resumeSizeKb: Math.max(1, Math.round(resumeDoc.size / 1024)),
     resumeId,
+    scoreBreakdown,
+    scoreTitle,
   });
 };
 

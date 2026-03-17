@@ -31,7 +31,13 @@
                     <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End interview</button>
                 </div>
                 <textarea id="prompt" name="prompt" rows="5" maxlength="4000" placeholder="Type your answer or ask for clarification..."></textarea>
-                <button type="submit" id="send-btn" class="btn-primary">Send</button>
+                <div class="chat-actions">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button type="button" id="mic-btn" class="btn-primary outline">🎤 Voice</button>
+                        <span id="mic-status" class="muted" style="font-size:0.9rem;"></span>
+                    </div>
+                    <button type="submit" id="send-btn" class="btn-primary">Send</button>
+                </div>
             </form>
         </div>
 
@@ -72,6 +78,22 @@
                     <% }); %>
                 </div>
                 <input type="hidden" id="ctx-resume" value="">
+                <label class="toggle-row">
+                    <input type="checkbox" id="ctx-silly">
+                    <span>Enable crazy mode (parody/fun tone, informal)</span>
+                </label>
+                <div id="custom-tone-block" class="hidden">
+                    <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
+                    <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., \"Channel Sherlock Holmes\" or \"Sound like a pirate\"" disabled></textarea>
+                </div>
+                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
+                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.1" value="0.5">
+
+                <label for="ctx-style">Professionalism style (supportive → direct) <span id="style-val" class="slider-val"></span></label>
+                <input type="range" id="ctx-style" min="0" max="1" step="0.1" value="0.5">
+
+                <label for="ctx-difficulty">Difficulty <span id="difficulty-val" class="slider-val"></span></label>
+                <input type="range" id="ctx-difficulty" min="0" max="1" step="0.1" value="0.5">
 
                 <button type="submit" class="btn-primary full-width" style="margin-top:14px;">Create new chat</button>
             </form>
@@ -86,21 +108,47 @@
         const contextBtn = document.getElementById('context-btn');
         const endBtn = document.getElementById('end-btn');
         const sendBtn = document.getElementById('send-btn');
+        const micBtn = document.getElementById('mic-btn');
+        const micStatus = document.getElementById('mic-status');
         const contextModal = document.getElementById('context-modal');
         const closeModal = document.getElementById('close-modal');
         const contextForm = document.getElementById('context-form');
         const ctxCompany = document.getElementById('ctx-company');
         const ctxRole = document.getElementById('ctx-role');
         const ctxResume = document.getElementById('ctx-resume');
+        const ctxSilly = document.getElementById('ctx-silly');
+        const ctxCustomTone = document.getElementById('ctx-custom-tone');
+        const ctxSeriousness = document.getElementById('ctx-seriousness');
+        const ctxStyle = document.getElementById('ctx-style');
+        const ctxDifficulty = document.getElementById('ctx-difficulty');
+        const seriousnessVal = document.getElementById('seriousness-val');
+        const styleVal = document.getElementById('style-val');
+        const difficultyVal = document.getElementById('difficulty-val');
         const resumeCards = document.querySelectorAll('.resume-card');
         const analysisPanel = document.getElementById('analysis-panel');
 
         const history = [];
-        let context = { company: '', role: '', resumeId: '' };
+        let context = { company: '', role: '', resumeId: '', silly: false, seriousness: 0.5, style: 0.5, difficulty: 0.5, customTone: '' };
         let contextSet = false;
         let interviewComplete = false;
         let chatId = '';
         const STATE_KEY = 'vi_mock_chat_state';
+        let recognition = null;
+        let listening = false;
+
+        const updateSliderLabels = () => {
+            seriousnessVal.textContent = ctxSeriousness.value;
+            styleVal.textContent = ctxStyle.value;
+            difficultyVal.textContent = ctxDifficulty.value;
+        };
+
+        const toggleCustomTone = () => {
+            const enabled = ctxSilly.checked;
+            const block = document.getElementById('custom-tone-block');
+            if (block) block.classList.toggle('hidden', !enabled);
+            ctxCustomTone.disabled = !enabled;
+            if (!enabled) ctxCustomTone.value = '';
+        };
 
         const newChatId = () => {
             if (window.crypto?.randomUUID) return crypto.randomUUID();
@@ -134,6 +182,13 @@
                 ctxCompany.value = context.company || '';
                 ctxRole.value = context.role || '';
                 ctxResume.value = context.resumeId || '';
+                ctxSilly.checked = !!context.silly;
+                ctxCustomTone.value = context.customTone || '';
+                ctxSeriousness.value = context.seriousness ?? 0.5;
+                ctxStyle.value = context.style ?? 0.5;
+                ctxDifficulty.value = context.difficulty ?? 0.5;
+                updateSliderLabels();
+                toggleCustomTone();
                 resumeCards.forEach(c => {
                     if (c.dataset.resumeId === context.resumeId) c.classList.add('selected');
                 });
@@ -265,7 +320,7 @@
         const resetChat = () => {
             chatLog.innerHTML = '';
             history.length = 0;
-            context = { company: '', role: '', resumeId: '' };
+            context = { company: '', role: '', resumeId: '', silly: false, seriousness: 0.5, style: 0.5, difficulty: 0.5, customTone: '' };
             contextSet = false;
             interviewComplete = false;
             chatId = '';
@@ -277,6 +332,13 @@
             localStorage.removeItem(STATE_KEY);
                 // no secondary typing text
         };
+
+        [ctxSeriousness, ctxStyle, ctxDifficulty].forEach((slider) => {
+            slider.addEventListener('input', updateSliderLabels);
+        });
+        ctxSilly.addEventListener('change', toggleCustomTone);
+        updateSliderLabels();
+        toggleCustomTone();
 
         const restored = hydrateState();
         if (!restored) {
@@ -293,6 +355,11 @@
             context.company = ctxCompany.value.trim();
             context.role = ctxRole.value.trim();
             context.resumeId = ctxResume.value;
+            context.silly = ctxSilly.checked;
+            context.customTone = (ctxCustomTone.value || '').trim().slice(0, 200);
+            context.seriousness = parseFloat(ctxSeriousness.value);
+            context.style = parseFloat(ctxStyle.value);
+            context.difficulty = parseFloat(ctxDifficulty.value);
             contextSet = !!(context.company && context.role && context.resumeId);
             if (!chatId) {
                 chatId = newChatId();
@@ -353,6 +420,72 @@
             resetChat();
             contextModal.classList.remove('hidden');
         });
+
+        // Voice dictation using Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = true;
+            recognition.continuous = true;
+            let dictBuffer = '';
+
+            recognition.onstart = () => {
+                listening = true;
+                micBtn.classList.add('active');
+                micBtn.classList.remove('outline');
+                micStatus.textContent = 'Listening... tap to stop';
+            };
+            recognition.onend = () => {
+                listening = false;
+                micBtn.classList.remove('active');
+                micBtn.classList.add('outline');
+                // add closing punctuation if dictated text present
+                if (dictBuffer) {
+                    const trimmed = promptInput.value.trim();
+                    if (trimmed && !/[.!?]$/.test(trimmed)) {
+                        promptInput.value = `${trimmed}.`;
+                    }
+                }
+                dictBuffer = '';
+                if (micStatus.textContent.startsWith('Listening')) micStatus.textContent = '';
+            };
+            recognition.onerror = (e) => {
+                listening = false;
+                micBtn.classList.remove('active');
+                micBtn.classList.add('outline');
+                micStatus.textContent = e.error === 'not-allowed' ? 'Mic blocked' : 'Mic error';
+            };
+            recognition.onresult = (event) => {
+                let finalText = '';
+                let interimText = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) finalText += transcript;
+                    else interimText += transcript;
+                }
+                // Replace interim text live; append final once.
+                const existing = promptInput.dataset.baseText || promptInput.value;
+                dictBuffer = (finalText || interimText).trim();
+                const merged = (existing + ' ' + dictBuffer).trim();
+                promptInput.value = merged;
+                promptInput.dataset.baseText = existing; // preserve original
+            };
+
+            micBtn.addEventListener('click', () => {
+                if (listening) {
+                    recognition.stop();
+                    return;
+                }
+                // Store current text as base to avoid duplication on multiple runs
+                promptInput.dataset.baseText = promptInput.value;
+                micStatus.textContent = 'Listening... tap to stop';
+                recognition.start();
+            });
+        } else {
+            micBtn.disabled = true;
+            micStatus.textContent = 'Voice unavailable';
+        }
 
         endBtn.addEventListener('click', () => {
             interviewComplete = true;

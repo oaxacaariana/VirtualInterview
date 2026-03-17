@@ -10,6 +10,7 @@ const resultsRouter = require('./routes/results');
 const openaiRouter = require('./routes/openai');
 const authRouter = require('./routes/auth');
 const profileRouter = require('./routes/profile');
+const resumesRouter = require('./routes/resumes');
 
 // creates the uploads folder if it doesn't exist for the user yet
 if (!fs.existsSync('uploads')) {
@@ -20,6 +21,13 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    maxAge: '30d',
+    immutable: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -50,6 +58,7 @@ app.use('/openai', requireAuth, openaiRouter);
 app.use('/upload', requireAuth, uploadRouter);
 app.use('/results', requireAuth, resultsRouter);
 app.use('/profile', requireAuth, profileRouter);
+app.use('/resumes', requireAuth, resumesRouter);
 
 module.exports = app;
 

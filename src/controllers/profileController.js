@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { ObjectId } = require('mongodb');
+const { ringColorForScore } = require('../utils/scoreColors');
 
 const toObjectId = (id) => {
   try {
@@ -18,6 +19,9 @@ const showProfile = async (req, res) => {
   const resumeScores = req.app.locals.collections?.resumeScores;
 
   const user = users ? await users.findOne({ _id: userId }) : null;
+  if (user && req.session?.user) {
+    req.session.user.name = user.name;
+  }
   const resumes = resumeFiles
     ? await resumeFiles
         .find({
@@ -25,6 +29,7 @@ const showProfile = async (req, res) => {
             { userId },
             { userId: req.session?.user?.id || null }, // fallback for legacy string/null entries
           ],
+          archived: { $ne: true },
         })
         .sort({ uploadedAt: -1 })
         .limit(20)
@@ -53,7 +58,12 @@ const showProfile = async (req, res) => {
         r.fitSummary = match.summary;
         r.fitPositives = match.positives;
         r.fitNegatives = match.negatives;
+        r.fitCompany = match.company;
+        r.fitJobSnippet = match.jobSnippet;
+        r.fitTitle = match.title;
+        r.fitRubric = match.rubric;
       }
+      r.ringColor = ringColorForScore(r.fitScore);
     });
   }
 
@@ -89,7 +99,7 @@ const updateProfile = async (req, res) => {
   if (Object.keys(updates).length === 0) {
     const user = await users.findOne({ _id: userId });
     const resumes = await req.app.locals.collections.resumeFiles
-      .find({ userId })
+      .find({ userId, archived: { $ne: true } })
       .sort({ uploadedAt: -1 })
       .limit(20)
       .toArray();
@@ -119,6 +129,7 @@ const updateProfile = async (req, res) => {
         { userId },
         { userId: req.session?.user?.id || null },
       ],
+      archived: { $ne: true },
     })
     .sort({ uploadedAt: -1 })
     .limit(20)
@@ -145,7 +156,12 @@ const updateProfile = async (req, res) => {
         r.fitSummary = match.summary;
         r.fitPositives = match.positives;
         r.fitNegatives = match.negatives;
+        r.fitCompany = match.company;
+        r.fitJobSnippet = match.jobSnippet;
+        r.fitTitle = match.title;
+        r.fitRubric = match.rubric;
       }
+      r.ringColor = ringColorForScore(r.fitScore);
     });
   }
 

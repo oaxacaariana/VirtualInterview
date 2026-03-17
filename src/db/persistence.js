@@ -73,6 +73,8 @@ const buildResumeScore = ({
   userId = null,
   resumeId,
   score,
+  rubric = null,
+  title = 'Compatibility Score',
   summary,
   positives = [],
   negatives = [],
@@ -82,6 +84,8 @@ const buildResumeScore = ({
   userId,
   resumeId,
   score,
+  rubric,
+  title,
   summary,
   positives,
   negatives,
@@ -106,6 +110,7 @@ const buildResumeFile = ({
   mimeType,
   // TODO: add parsedText once resume parser is implemented
   uploadedAt: new Date(),
+  archived: false,
 });
 
 module.exports = {

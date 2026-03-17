@@ -19,15 +19,16 @@
   "homepage": "https://github.com/oaxacaariana/VirtualInterview#readme",
   "description": "",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "dotenv": "^17.3.1",
     "ejs": "^4.0.1",
     "express": "^5.2.1",
+    "express-session": "^1.17.3",
     "fs": "^0.0.1-security",
     "mongodb": "^7.1.0",
     "multer": "^2.0.2",
     "openai": "^4.28.4",
-    "bcryptjs": "^2.4.3",
-    "express-session": "^1.17.3"
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

@@ -1,4 +1,5 @@
 const { ObjectId } = require('mongodb');
+const { ringColorForScore } = require('../utils/scoreColors');
 
 const showResultsPage = async (req, res) => {
   const resumeIdParam = req.query?.resumeId;
@@ -19,21 +20,20 @@ const showResultsPage = async (req, res) => {
       : null;
 
     if (scoreDoc || fileDoc) {
-      const fitScore = scoreDoc?.score ?? null;
-      const ringColor =
-        fitScore === null
-          ? '#555'
-          : fitScore <= 20
-          ? '#d64545'
-          : fitScore <= 50
-          ? '#f0a202'
-          : fitScore <= 75
-          ? '#8ac12f'
-          : '#3fc26c';
+      const rawScore = scoreDoc?.score ?? null;
+      const fitScore =
+        typeof rawScore === 'number'
+          ? rawScore
+          : Number.isFinite(Number(rawScore))
+          ? Number(rawScore)
+          : null;
+      const ringColor = ringColorForScore(fitScore);
 
       return res.render('results', {
         fitScore,
         ringColor,
+        scoreBreakdown: scoreDoc?.rubric || null,
+        scoreTitle: scoreDoc?.title || 'Compatibility Score',
         positives: scoreDoc?.positives || [],
         negatives: scoreDoc?.negatives || [],
         summary: scoreDoc?.summary || '',
@@ -50,6 +50,8 @@ const showResultsPage = async (req, res) => {
   res.render('results', {
     fitScore: null,
     ringColor: '#555',
+    scoreBreakdown: null,
+    scoreTitle: 'Compatibility Score',
     positives: [],
     negatives: [],
     summary: '',
