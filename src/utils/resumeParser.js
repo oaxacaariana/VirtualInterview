@@ -1,17 +1,8 @@
+const { Console } = require('console');
 const fs = require('fs');
 const path = require('path');
-
-var rows = {}; // indexed by y-position
-
-function printRow(y) {
-  console.log((rows[y] || []).join(''));
-}
-
-function printRows() {
-  Object.keys(rows) // => array of y-positions (type: float)
-    .sort((y1, y2) => parseFloat(y1) - parseFloat(y2)) // sort float positions
-    .forEach(printRow);
-}
+const { PdfReader } = require("pdfreader");
+const mammoth = require("mammoth");
 
 /**
  * TODO: Implement proper resume parsing (PDF/DOCX) using a library like pdf-parse or mammoth.
@@ -31,27 +22,45 @@ async function parseResumeToText(filePath) {
     }
   }
 
-  try {
-    const buffer = fs.readFileSync(filePath);
-    // Placeholder: plain UTF-8 read (works only for text-based files)
-    // return buffer.toString('utf8');
-    new PdfReader().parseFileItems(filePath, function (err, item) {
-      if (err)
-        console.error(err);
-      else if (!item || item.page) {
-        // end of file, or page
-        printRows();
-        rows = {}; // clear rows for next page
+  // Check if file type is .pdf
+  if (path.extname(filePath) == ".pdf") {
+    return new Promise((resolve, reject) => {
+      let rows = {}; // Indexed by y-position
+
+      // Function to build the output
+      function buildText() {
+        return Object.keys(rows)
+          .sort((a, b) => parseFloat(a) - parseFloat(b))
+          .map(y => rows[y].join(' '))
+          .join('\n');
       }
-      else if (item.text) {
-        // accumulate text items into rows object, per line
-        (rows[item.y] = rows[item.y] || []).push(item.text);
-      }
+
+      new PdfReader().parseFileItems(filePath, (err, item) => {
+        if (err) return reject(err);
+        if (!item) { // Done parsing
+          return resolve(buildText());
+        }
+        if (item.text) {
+          (rows[item.y] = rows[item.y] || []).push(item.text);
+        }
+      });
     });
-  } catch (error) {
-    console.error('parseResumeToText failed:', error);
-    return '';
   }
+
+  // Check if file type is .docx
+  else if (path.extname(filePath) == ".docx") {
+    return mammoth.convertToHtml({ path: filePath })
+      .then(result => {
+      const html = result.value;
+      const messages = result.messages; //Optional warnings
+      return html;
+    })
+    .catch(error => {
+      console.error("Mammoth failed:", error);
+      return "";
+    });
+  }
+
 }
 
 module.exports = { parseResumeToText };
