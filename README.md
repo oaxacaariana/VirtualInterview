@@ -1,12 +1,11 @@
-# Virtual Interview Uploader (Dev Notes)
+# Virtual Interview App
 
-A small Express/EJS prototype for uploading resumes, previewing them, and wiring in future LLM + scoring features.
+Express + EJS app for uploading resumes, scoring them with an LLM, and running a customizable mock interview.
 
 ## Setup
 1) **Install Node 18+** and npm.
-2) **Install MongoDB locally** (Community Server): https://www.mongodb.com/try/download/community  
-   Start it with `mongod` on the default port.
-3) **Clone & install deps**
+2) **Install MongoDB Community** and start `mongod`.
+3) **Install deps**
    ```bash
    npm install
    ```
@@ -15,34 +14,41 @@ A small Express/EJS prototype for uploading resumes, previewing them, and wiring
    PORT=3000
    MONGODB_URI=mongodb://127.0.0.1:27017
    MONGODB_DB=virtual_interview
-   OPENAI_API_KEY=your-key-here   # needed when LLM scoring is wired in
+   OPENAI_API_KEY=your-key-here
    MODEL=gpt-4.1-mini
-   WEB_SEARCH_ENDPOINT=https://serpapi.com/search.json   # if using SerpAPI
-   WEB_SEARCH_KEY=your-serpapi-key
+   WEB_SEARCH_ENDPOINT=https://serpapi.com/search.json   # optional
+   WEB_SEARCH_KEY=your-serpapi-key                      # optional
    ```
 5) **Run**
    ```bash
    npm start
-   # or in dev: npm run dev
+   # or: npm run dev
    ```
-6) Visit `http://localhost:3000` to upload a resume; uploads land in `/uploads`.
+6) Visit `http://localhost:3000`.
 
-## Current Endpoints
-- `GET /` � home
-- `GET /upload` / `POST /upload` � upload & score resume
-- `GET /results` � latest score view
-- `GET /openai` � mock interviewer (auth required)
-- `GET /openai/logs` � debug: recent transcripts (auth required)
-- `GET /upload/preview/:id` � resume text preview (uses parsed text when available)
+## Key Features
+- Resume upload, scoring (0–100) with component breakdown, and results view.
+- Resume archive/unarchive with dedicated Resumes page.
+- Mock interviewer with:
+  - Crazy mode (playful/parody tone, optional custom instructions).
+  - Sliders (0–1) for seriousness, professionalism style, and difficulty.
+  - Voice dictation (Web Speech API) with start/stop toggle.
+- Resume preview endpoint.
 
-## TODO (next up)
-- Plug in real resume text extraction in `src/utils/resumeParser.js` (parser still stubbed) and show parsed text in preview.
-- Fix and harden web research integration (SerpAPI): correct request shape, error handling, env docs.
-- Add interviewer personality presets/tuning controls.
-- Expose interview history UI and per-turn analysis view (turns already stored).
-- Broaden prompt diversity with more role-specific probes and follow-up behaviors.
+## Routes / Endpoints
+- `GET /` — Home.
+- `GET /upload` / `POST /upload` — Upload & score a resume.
+- `GET /results` — Latest score view (query `?resumeId=` to view a specific one).
+- `GET /resumes` — Active resumes list; archive/unarchive controls.
+- `GET /resumes?archived=1` — Archived resumes list.
+- `GET /upload/preview/:id` — Resume text preview.
+- `GET /openai` — Mock interviewer UI (auth required in production).
+- `POST /openai/start` — Start interview (expects resumeId/company/role plus optional personality sliders).
+- `POST /openai/ask` — Continue interview (prompt, transcript, same context).
+- `POST /openai/close` — Mark chat closed.
+- `GET /results?resumeId=:id` — Render results for a specific resume.
 
 ## Notes
-- Keep `.env` out of version control.
-- Multer currently stores the raw file; text extraction is a stub until the parser is added.
-- Mongo connection/scoring hooks are in progress; add them as you integrate the parser and persistence.
+- Uploads (resumes, avatars legacy) live under `/uploads`; served statically with caching.
+- Line endings may normalize to CRLF on Windows when Git checks files out.
+- Parser in `src/utils/resumeParser.js` is still a stub; replace with a real extractor as needed. 
