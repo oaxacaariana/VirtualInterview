@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const path = require('path');
 const router = express.Router();
 const { handleUpload, showUploadPage, viewResume } = require('../controllers/uploadController');
 
@@ -10,7 +11,10 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/'); // Saves uploaded files to the uploads folder
   },
   filename: (req, file, cb) => { // What the file is named
-    cb(null, file.originalname + '-' + Date.now()); // Sets file name to "name-time" so its unique
+    // Properly separate filename from extension to preserve extension for parser
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    cb(null, name + '-' + Date.now() + ext); // Sets file name to "name-time.ext" so its unique
   },
 });
 
