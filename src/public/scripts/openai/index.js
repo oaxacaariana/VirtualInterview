@@ -1,4 +1,4 @@
-import { startInterview, askInterview, closeInterview } from './api.js';
+import { startInterview, askInterview, closeInterview, getTurnReview } from './api.js';
 import { createChatView } from './chatView.js';
 import { createContextModal } from './contextModal.js';
 import { createInitialState, createEmptyContext, replaceState } from './state.js';
@@ -10,6 +10,7 @@ const elements = {
   form: document.getElementById('ai-form'),
   promptInput: document.getElementById('prompt'),
   statusDot: document.getElementById('ai-status'),
+  setupBtn: document.getElementById('setup-btn'),
   contextBtn: document.getElementById('context-btn'),
   endBtn: document.getElementById('end-btn'),
   sendBtn: document.getElementById('send-btn'),
@@ -18,24 +19,36 @@ const elements = {
   contextModal: document.getElementById('context-modal'),
   closeModal: document.getElementById('close-modal'),
   contextForm: document.getElementById('context-form'),
+  contextSubmit: document.getElementById('context-submit'),
+  contextModalTitle: document.getElementById('context-modal-title'),
+  contextModalSubtitle: document.getElementById('context-modal-subtitle'),
   ctxCompany: document.getElementById('ctx-company'),
   ctxRole: document.getElementById('ctx-role'),
   ctxResume: document.getElementById('ctx-resume'),
+  ctxWebSearch: document.getElementById('ctx-web-search'),
   ctxSilly: document.getElementById('ctx-silly'),
   ctxCustomTone: document.getElementById('ctx-custom-tone'),
   ctxSeriousness: document.getElementById('ctx-seriousness'),
   ctxStyle: document.getElementById('ctx-style'),
   ctxDifficulty: document.getElementById('ctx-difficulty'),
+  ctxComplexity: document.getElementById('ctx-complexity'),
   seriousnessVal: document.getElementById('seriousness-val'),
   styleVal: document.getElementById('style-val'),
   difficultyVal: document.getElementById('difficulty-val'),
+  complexityVal: document.getElementById('complexity-val'),
   resumeCards: [...document.querySelectorAll('.resume-card')],
   analysisPanel: document.getElementById('analysis-panel'),
+  finalScorePanel: document.getElementById('final-score-panel'),
+  analysisPrivacyBtn: document.getElementById('analysis-privacy-btn'),
 };
 
 const state = createInitialState();
 const chatView = createChatView(elements);
 const contextModal = createContextModal(elements);
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const ACTIVITY_PERSIST_INTERVAL_MS = 15 * 1000;
+let inactivityTimer = null;
+let lastPersistedActivityAt = 0;
 
 createVoiceInput({
   micBtn: elements.micBtn,
@@ -51,18 +64,105 @@ const newChatId = () => {
 };
 
 const persist = () => saveState(state);
+const hasActiveInterview = () => !!(state.chatId && state.contextSet && !state.interviewComplete);
+
+const markActivity = () => {
+  state.lastActivityAt = Date.now();
+  lastPersistedActivityAt = state.lastActivityAt;
+  persist();
+};
+
+const clearInactivityTimer = () => {
+  if (inactivityTimer) {
+    window.clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+};
+
+const scheduleInactivityTimeout = () => {
+  clearInactivityTimer();
+  if (!hasActiveInterview() || !state.lastActivityAt) {
+    return;
+  }
+
+  const remaining = INACTIVITY_TIMEOUT_MS - (Date.now() - state.lastActivityAt);
+  if (remaining <= 0) {
+    void expireInterviewForInactivity();
+    return;
+  }
+
+  inactivityTimer = window.setTimeout(() => {
+    void expireInterviewForInactivity();
+  }, remaining);
+};
+
+const countUserTurns = (history) => history.filter((message) => message.role === 'user').length;
+
+const addUserMessage = (content, turnNumber) => {
+  const bubble = chatView.addMessage('user', content, {
+    onSelect: () =>
+      chatView.showTurnAnalysis({
+        analysis: state.turnAnalyses[String(turnNumber)] || null,
+        answer: content,
+      }),
+  });
+
+  const analysis = state.turnAnalyses[String(turnNumber)];
+  if (analysis) {
+    chatView.attachInlineAnalysis(bubble, analysis);
+  }
+
+  return bubble;
+};
+
+const addAssistantMessage = (content) => {
+  chatView.addMessage('assistant', content);
+};
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const watchTurnAnalysis = async ({ chatId, turnNumber, answer, bubble }) => {
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    try {
+      const result = await getTurnReview(chatId, turnNumber);
+      if (state.chatId !== chatId) {
+        return;
+      }
+      if (result.ready && result.review) {
+        state.turnAnalyses[String(turnNumber)] = result.review;
+        chatView.attachInlineAnalysis(bubble, result.review);
+        chatView.showTurnAnalysis({
+          analysis: result.review,
+          answer,
+        });
+        persist();
+        return;
+      }
+    } catch (error) {
+      console.warn('Turn review polling failed:', error);
+      return;
+    }
+
+    await wait(attempt < 3 ? 500 : 1000);
+  }
+};
 
 const setThinking = (thinking) => {
   chatView.setStatus(thinking ? 'Thinking...' : 'Ready', thinking);
 };
 
 const resetChat = () => {
+  clearInactivityTimer();
   chatView.clearMessages();
   replaceState(state, createInitialState());
   state.context = createEmptyContext();
   chatView.setInterviewComplete(false);
+  chatView.setIdleAnalysis();
+  chatView.setFinalPlaceholder();
   clearState();
   contextModal.populate(state.context);
+  contextModal.setMode('edit');
+  chatView.setCoachBlurred(state.coachBlurred);
 };
 
 const hydrate = () => {
@@ -77,24 +177,63 @@ const hydrate = () => {
   }
 
   chatView.clearMessages();
+  let turnNumber = 0;
   state.history.forEach((message) => {
-    chatView.addMessage(message.role, message.content);
+    if (message.role === 'user') {
+      turnNumber += 1;
+      addUserMessage(message.content, turnNumber);
+      return;
+    }
+    addAssistantMessage(message.content);
   });
   contextModal.populate(state.context);
+  contextModal.setMode('view');
   chatView.setInterviewComplete(state.interviewComplete);
+  chatView.setCoachBlurred(state.coachBlurred);
+  if (state.finalReview) {
+    chatView.showFinalReview(state.finalReview);
+  } else {
+    chatView.setIdleAnalysis();
+    chatView.setFinalPlaceholder();
+  }
   contextModal.close();
+  scheduleInactivityTimeout();
   return true;
 };
 
 const completeInterview = async (assistantMessage) => {
+  clearInactivityTimer();
   state.interviewComplete = true;
   if (assistantMessage) {
-    chatView.addMessage('assistant', assistantMessage);
+    addAssistantMessage(assistantMessage);
     state.history.push({ role: 'assistant', content: assistantMessage });
   }
   chatView.setInterviewComplete(true);
+  if (countUserTurns(state.history) === 0) {
+    state.finalReview = null;
+    chatView.showFinalReview(null);
+    persist();
+    return;
+  }
+  chatView.setFinalLoading();
+  try {
+    const closeResult = await closeInterview(state.chatId);
+    state.finalReview = closeResult?.finalReview || null;
+    if (state.finalReview) {
+      chatView.showFinalReview(state.finalReview);
+    }
+  } catch (error) {
+    addAssistantMessage(`Final review failed: ${error.message}`);
+  }
   persist();
-  await closeInterview(state.chatId);
+};
+
+const expireInterviewForInactivity = async () => {
+  if (!hasActiveInterview()) {
+    clearInactivityTimer();
+    return;
+  }
+  await completeInterview('Interview closed after 30 minutes of inactivity. Start a new session when you are ready to continue practicing.');
 };
 
 elements.form.addEventListener('submit', async (event) => {
@@ -105,41 +244,61 @@ elements.form.addEventListener('submit', async (event) => {
   }
 
   if (!state.contextSet || !state.context.company || !state.context.role || !state.context.resumeId) {
-    chatView.addMessage('assistant', 'Please set company, role, and pick a resume before chatting.');
+    addAssistantMessage('Please set company, role, and pick a resume before chatting.');
     return;
   }
 
   if (state.interviewComplete) {
-    chatView.addMessage('assistant', 'Interview is marked complete. Start a new session to continue.');
+    addAssistantMessage('Interview is marked complete. Start a new session to continue.');
     return;
   }
 
-  chatView.addMessage('user', prompt);
+  const priorTranscript = state.history.slice();
+  const turnNumber = countUserTurns(priorTranscript) + 1;
+  const userBubble = addUserMessage(prompt, turnNumber);
   state.history.push({ role: 'user', content: prompt });
-  persist();
+  markActivity();
   elements.promptInput.value = '';
   setThinking(true);
 
   try {
     const data = await askInterview({
       prompt,
-      transcript: state.history,
+      transcript: priorTranscript,
       interviewComplete: state.interviewComplete,
       chatId: state.chatId,
       ...state.context,
     });
 
-    chatView.addMessage('assistant', data.reply);
+    addAssistantMessage(data.reply);
     state.history.push({ role: 'assistant', content: data.reply });
     state.chatId = data.chatId || state.chatId;
+    if (data.backgroundDoc) {
+      state.context.backgroundDoc = data.backgroundDoc;
+      state.context.resumeText = data.resumeText || '';
+      state.context.jobDescription = data.jobDescription || '';
+      state.context.researchSummary = data.researchSummary || '';
+      state.context.webSignals = data.webSignals || '';
+    }
+    markActivity();
+    chatView.setIdleAnalysis();
+
+    if (data.analysisPending) {
+      void watchTurnAnalysis({
+        chatId: data.chatId || state.chatId,
+        turnNumber: data.turnNumber || turnNumber,
+        answer: prompt,
+        bubble: userBubble,
+      });
+    }
 
     if (data.interviewComplete) {
       await completeInterview();
     } else {
-      persist();
+      scheduleInactivityTimeout();
     }
   } catch (error) {
-    chatView.addMessage('assistant', `Something went wrong: ${error.message}`);
+    addAssistantMessage(`Something went wrong: ${error.message}`);
   } finally {
     if (!state.interviewComplete) {
       setThinking(false);
@@ -158,12 +317,14 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
 
   persist();
   contextModal.close();
+  contextModal.setMode('view');
 
   if (!state.contextSet) {
-    chatView.addMessage('assistant', 'Please set company, role, and pick a resume before chatting.');
+    addAssistantMessage('Please set company, role, and pick a resume before chatting.');
     return;
   }
 
+  markActivity();
   setThinking(true);
   try {
     const data = await startInterview({
@@ -173,13 +334,21 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
     });
 
     if (data?.opener) {
-      chatView.addMessage('assistant', data.opener);
+      addAssistantMessage(data.opener);
       state.history.push({ role: 'assistant', content: data.opener });
       state.chatId = data.chatId || state.chatId;
-      persist();
+      if (data.backgroundDoc) {
+        state.context.backgroundDoc = data.backgroundDoc;
+        state.context.resumeText = data.resumeText || '';
+        state.context.jobDescription = data.jobDescription || '';
+        state.context.researchSummary = data.researchSummary || '';
+        state.context.webSignals = data.webSignals || '';
+      }
+      markActivity();
+      scheduleInactivityTimeout();
     }
   } catch (error) {
-    chatView.addMessage('assistant', `Error preparing interview: ${error.message}`);
+    addAssistantMessage(`Error preparing interview: ${error.message}`);
   } finally {
     setThinking(false);
   }
@@ -187,6 +356,13 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
 
 elements.contextBtn.addEventListener('click', () => {
   resetChat();
+  contextModal.setMode('edit');
+  contextModal.open();
+});
+
+elements.setupBtn.addEventListener('click', () => {
+  contextModal.populate(state.context);
+  contextModal.setMode('view');
   contextModal.open();
 });
 
@@ -194,7 +370,35 @@ elements.endBtn.addEventListener('click', async () => {
   await completeInterview('Interview marked complete. Thanks for practicing!');
 });
 
+elements.analysisPrivacyBtn?.addEventListener('click', () => {
+  state.coachBlurred = !state.coachBlurred;
+  chatView.setCoachBlurred(state.coachBlurred);
+  persist();
+});
+
+['pointerdown', 'keydown'].forEach((eventName) => {
+  window.addEventListener(eventName, () => {
+    if (!hasActiveInterview()) {
+      return;
+    }
+    state.lastActivityAt = Date.now();
+    if (state.lastActivityAt - lastPersistedActivityAt >= ACTIVITY_PERSIST_INTERVAL_MS) {
+      lastPersistedActivityAt = state.lastActivityAt;
+      persist();
+    }
+    scheduleInactivityTimeout();
+  });
+});
+
 if (!hydrate()) {
   resetChat();
   contextModal.open();
+} else if (hasActiveInterview()) {
+  if (state.lastActivityAt && Date.now() - state.lastActivityAt >= INACTIVITY_TIMEOUT_MS) {
+    void expireInterviewForInactivity();
+  } else {
+    scheduleInactivityTimeout();
+  }
 }
+
+chatView.setCoachBlurred(state.coachBlurred);

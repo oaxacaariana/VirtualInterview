@@ -16,7 +16,14 @@ const validateStartInterviewInput = (body = {}) => {
     seriousness = 0.5,
     style = 0.5,
     difficulty = 0.5,
+    complexity = 0.5,
     customTone = '',
+    backgroundDoc = '',
+    resumeText = '',
+    jobDescription = '',
+    researchSummary = '',
+    webSignals = '',
+    webSearchEnabled = true,
     chatId,
   } = body;
 
@@ -35,7 +42,14 @@ const validateStartInterviewInput = (body = {}) => {
     seriousness,
     style,
     difficulty,
+    complexity,
     customTone,
+    backgroundDoc,
+    resumeText,
+    jobDescription,
+    researchSummary,
+    webSignals,
+    webSearchEnabled,
     chatId,
   };
 };
@@ -52,7 +66,14 @@ const validateAskInterviewInput = (body = {}) => {
     seriousness = 0.5,
     style = 0.5,
     difficulty = 0.5,
+    complexity = 0.5,
     customTone = '',
+    backgroundDoc = '',
+    resumeText = '',
+    jobDescription = '',
+    researchSummary = '',
+    webSignals = '',
+    webSearchEnabled = true,
     chatId,
   } = body;
 
@@ -79,7 +100,14 @@ const validateAskInterviewInput = (body = {}) => {
     seriousness,
     style,
     difficulty,
+    complexity,
     customTone,
+    backgroundDoc,
+    resumeText,
+    jobDescription,
+    researchSummary,
+    webSignals,
+    webSearchEnabled,
     chatId,
   };
 };

@@ -10,6 +10,10 @@ export const saveState = (state) => {
         contextSet: state.contextSet,
         interviewComplete: state.interviewComplete,
         chatId: state.chatId,
+        turnAnalyses: state.turnAnalyses,
+        finalReview: state.finalReview,
+        lastActivityAt: state.lastActivityAt,
+        coachBlurred: state.coachBlurred,
       })
     );
   } catch (error) {

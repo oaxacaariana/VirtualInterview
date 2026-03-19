@@ -1,0 +1,58 @@
+@media (max-width: 900px) {
+    .ai-shell {
+        grid-template-columns: 1fr;
+        padding: 30px 20px;
+    }
+
+    .review-rail {
+        position: static;
+    }
+
+    .coach-grid,
+    .final-score-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .form-shell {
+        max-width: 620px;
+        grid-template-columns: 1fr;
+    }
+
+    .setup-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-grade-card__letter {
+        font-size: 7.4rem;
+        left: 18px;
+    }
+
+    .chat-grade-card .resume-card__meta {
+        padding-left: 68px;
+    }
+
+    .hero {
+        padding: 80px 30px;
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .hero,
+    .features,
+    .how-it-works,
+    .footer1,
+    .ai-shell {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .accent-illu {
+        max-width: 280px;
+    }
+}

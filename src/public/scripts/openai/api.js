@@ -29,5 +29,12 @@ const postJson = async (url, body) => {
 
 export const startInterview = (payload) => postJson('/openai/start', payload);
 export const askInterview = (payload) => postJson('/openai/ask', payload);
-export const closeInterview = (chatId) =>
-  postJson('/openai/close', { chatId }).catch(() => null);
+export const closeInterview = (chatId) => postJson('/openai/close', { chatId });
+export const getTurnReview = async (chatId, turn) => {
+  const response = await fetch(`/openai/review?chatId=${encodeURIComponent(chatId)}&turn=${encodeURIComponent(turn)}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+  return parseJsonResponse(response);
+};

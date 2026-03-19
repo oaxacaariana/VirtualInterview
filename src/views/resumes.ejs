@@ -41,11 +41,11 @@
                   ? (r.originalName.length > nameLimit ? r.originalName.slice(0, nameLimit - 1) + '…' : r.originalName)
                   : 'Untitled resume';
                 const bars = [
-                  { label: 'Skills', val: breakdown.skills_alignment, max: 30 },
-                  { label: 'Exp', val: breakdown.experience_relevance, max: 25 },
-                  { label: 'Edu', val: breakdown.education_certifications, max: 15 },
-                  { label: 'Keywords', val: breakdown.role_keywords, max: 15 },
-                  { label: 'Impact', val: breakdown.achievements_impact, max: 15 },
+                  { label: 'Fit', val: breakdown.role_fit, max: 25 },
+                  { label: 'Depth', val: breakdown.experience_depth, max: 20 },
+                  { label: 'Impact', val: breakdown.quantified_impact, max: 15 },
+                  { label: 'Proof', val: breakdown.skills_evidence_alignment, max: 10 },
+                  { label: 'Complete', val: breakdown.resume_completeness, max: 10 },
                 ];
                 const pct = (v, m) => (typeof v === 'number' && m ? Math.max(0, Math.min(100, Math.round((v/m)*100))) : 0);
             %>
@@ -54,7 +54,7 @@
                     <div class="resume-card__meta">
                         <h3 class="resume-title" title="<%= r.originalName %>"><%= displayName %></h3>
                         <p class="muted" style="margin:2px 0 0; font-size:0.9rem;">
-                            <%= r.fitTitle || 'Compatibility Score' %> &bull; <%= tier %>
+                            <%= r.fitTitle || 'Resume Strength & Role Fit' %> &bull; <%= tier %>
                         </p>
                         <div class="pill-row" style="margin-top:6px;">
                             <span class="pill">Uploaded: <%= r.uploadedAt ? r.uploadedAt.toISOString().slice(0,10) : 'n/a' %></span>

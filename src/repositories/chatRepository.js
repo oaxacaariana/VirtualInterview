@@ -7,8 +7,11 @@ const upsertChatTranscript = async ({
   chatId,
   model,
   transcript,
+  context,
+  questionAsked,
   prompt,
   reply,
+  review,
   status,
 }) => {
   const chatLogs = collections?.chatLogs;
@@ -24,6 +27,7 @@ const upsertChatTranscript = async ({
     sessionId,
     chatId,
     model,
+    context,
     messages: [
       ...transcript,
       { role: 'user', content: prompt.trim(), at: new Date() },
@@ -47,12 +51,20 @@ const upsertChatTranscript = async ({
     chatId,
     model,
     turn: userTurns + 1,
+    questionAsked,
     prompt: prompt.trim(),
     reply,
+    review,
   });
 
-  await chatTurns.insertOne(turnDoc);
-  return upsertResult;
+  const insertResult = await chatTurns.insertOne(turnDoc);
+  return {
+    upsertResult,
+    turnDoc: {
+      ...turnDoc,
+      _id: insertResult.insertedId,
+    },
+  };
 };
 
 const insertFallbackTranscript = async ({
@@ -62,6 +74,7 @@ const insertFallbackTranscript = async ({
   chatId,
   model,
   transcript,
+  context,
   prompt,
   reply,
   status,
@@ -76,6 +89,18 @@ const insertFallbackTranscript = async ({
     sessionId,
     model,
     status,
+    context: {
+      resumeId: context?.resumeId || null,
+      company: context?.company || '',
+      role: context?.role || '',
+      silly: !!context?.silly,
+      customTone: context?.customTone || '',
+      seriousness: context?.seriousness ?? 0.5,
+      style: context?.style ?? 0.5,
+      difficulty: context?.difficulty ?? 0.5,
+      complexity: context?.complexity ?? 0.5,
+      webSearchEnabled: context?.webSearchEnabled !== false,
+    },
     messages: [
       ...transcript,
       { role: 'user', content: prompt.trim(), at: new Date() },
@@ -112,9 +137,60 @@ const listRecentChatsForUser = async ({ collections, userId, limit = 20 }) => {
     .toArray();
 };
 
+const findChatLogByChatId = async ({ collections, chatId, userId }) => {
+  const chatLogs = collections?.chatLogs;
+  if (!chatLogs) {
+    throw new Error('chatLogs unavailable');
+  }
+
+  return chatLogs.findOne({ chatId, userId });
+};
+
+const listChatTurnsForChat = async ({ collections, chatId, userId }) => {
+  const chatTurns = collections?.chatTurns;
+  if (!chatTurns) {
+    throw new Error('chatTurns unavailable');
+  }
+
+  return chatTurns
+    .find({ chatId, userId })
+    .sort({ turn: 1, createdAt: 1 })
+    .toArray();
+};
+
+const updateChatTurnReview = async ({ collections, chatId, userId, turn, review }) => {
+  const chatTurns = collections?.chatTurns;
+  if (!chatTurns) {
+    throw new Error('chatTurns unavailable');
+  }
+
+  return chatTurns.updateOne(
+    { chatId, userId, turn },
+    {
+      $set: {
+        review,
+        reviewedAt: new Date(),
+      },
+    }
+  );
+};
+
+const findChatTurnByTurn = async ({ collections, chatId, userId, turn }) => {
+  const chatTurns = collections?.chatTurns;
+  if (!chatTurns) {
+    throw new Error('chatTurns unavailable');
+  }
+
+  return chatTurns.findOne({ chatId, userId, turn });
+};
+
 module.exports = {
   upsertChatTranscript,
   insertFallbackTranscript,
   markChatClosed,
   listRecentChatsForUser,
+  findChatLogByChatId,
+  listChatTurnsForChat,
+  updateChatTurnReview,
+  findChatTurnByTurn,
 };

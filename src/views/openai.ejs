@@ -17,8 +17,10 @@
                     <h1>AI-Powered Mock Interviewer</h1>
                     <p class="muted">Focused back-and-forth with a hiring manager persona.</p>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <button type="button" id="context-btn" class="btn-primary" style="padding:8px 16px;">New chat</button>
+                <div class="chat-header__actions">
+                    <button type="button" id="setup-btn" class="btn-outline">View setup</button>
+                    <a href="/openai/logs" class="btn-outline">Chat logs</a>
+                    <button type="button" id="context-btn" class="btn-primary">New chat</button>
                     <span id="ai-status" class="status-dot">Ready</span>
                 </div>
             </div>
@@ -41,61 +43,132 @@
             </form>
         </div>
 
-        <aside class="feedback-panel">
-            <h3>Review AI</h3>
-            <div id="analysis-panel" class="analysis-panel">
-                <p class="muted">Click one of your answers to see analysis here. (Coming soon: automated feedback.)</p>
+        <aside class="feedback-panel review-rail">
+                <div class="review-block review-block-inline">
+                    <div class="review-block__head">
+                        <div>
+                            <p class="eyebrow">Response coach</p>
+                            <h3>Inline read</h3>
+                        </div>
+                        <div class="review-block__actions">
+                            <button type="button" id="analysis-privacy-btn" class="pill-btn">Blur coach</button>
+                            <span class="review-badge">Live</span>
+                        </div>
+                    </div>
+                    <div id="analysis-panel" class="analysis-panel"></div>
+                </div>
+
+            <div class="review-block review-block-final">
+                <div class="review-block__head">
+                    <div>
+                        <p class="eyebrow">Interview score</p>
+                        <h3>Final breakdown</h3>
+                    </div>
+                    <span class="review-badge review-badge-score">Final</span>
+                </div>
+                <div id="final-score-panel" class="final-score-panel"></div>
             </div>
         </aside>
     </section>
 
     <div id="context-modal" class="modal hidden">
-        <div class="modal-card">
+        <div class="modal-card modal-card-lg">
             <div class="modal-head">
-                <h3>Interview context</h3>
-                <button id="close-modal" class="btn-primary modal-close-btn" style="padding:8px 16px;">Close</button>
+                <div>
+                    <p class="eyebrow">Interview setup</p>
+                    <h3 id="context-modal-title">Create new chat</h3>
+                    <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and launch.</p>
+                </div>
+                <button id="close-modal" class="btn-primary modal-close-btn">Close</button>
             </div>
             <form id="context-form">
-                <label>Target company</label>
-                <input type="text" id="ctx-company" maxlength="200" placeholder="Company name">
+                <div class="setup-grid">
+                    <div class="setup-column">
+                        <div class="setup-card">
+                            <label>Target company</label>
+                            <input type="text" id="ctx-company" maxlength="200" placeholder="Company name">
 
-                <label>Target role / title</label>
-                <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
+                            <label>Target role / title</label>
+                            <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
 
-                <label>Select resume</label>
-                <div class="resume-card-grid">
-                    <% (resumes || []).forEach(function(r) { %>
-                      <div class="resume-card" data-resume-id="<%= r._id %>">
-                        <div class="resume-card__top">
-                          <h4><%= r.originalName %></h4>
-                          <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
-                            <div class="score-ring__fill"></div>
-                            <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
-                          </div>
+                            <div class="setup-switches">
+                                <label class="switch-row">
+                                    <span>
+                                        <strong>Web research</strong>
+                                        <small class="muted">Pull external context before the interview starts.</small>
+                                    </span>
+                                    <span class="switch">
+                                        <input type="checkbox" id="ctx-web-search" checked>
+                                        <span class="switch-ui"></span>
+                                    </span>
+                                </label>
+
+                                <label class="switch-row">
+                                    <span>
+                                        <strong>Crazy mode</strong>
+                                        <small class="muted">Playful, parody-heavy interviewer tone.</small>
+                                    </span>
+                                    <span class="switch">
+                                        <input type="checkbox" id="ctx-silly">
+                                        <span class="switch-ui"></span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div id="custom-tone-block" class="hidden">
+                                <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
+                                <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                            </div>
                         </div>
-                        <p class="muted">Tap to select</p>
-                      </div>
-                    <% }); %>
+
+                        <div class="setup-card">
+                            <div class="slider-stack">
+                                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-style">Professionalism style <span id="style-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-style" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-difficulty">Difficulty <span id="difficulty-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-difficulty" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-complexity">Complexity <span id="complexity-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-complexity" min="0" max="1" step="0.01" value="0.5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-column">
+                        <div class="setup-card">
+                            <div class="setup-card__head">
+                                <div>
+                                    <p class="eyebrow">Resume source</p>
+                                    <h4>Select resume</h4>
+                                </div>
+                                <p class="muted">Used for interview context and grading.</p>
+                            </div>
+                            <div class="resume-card-grid">
+                                <% (resumes || []).forEach(function(r) { %>
+                                  <div class="resume-card" data-resume-id="<%= r._id %>">
+                                    <div class="resume-card__top">
+                                      <h4><%= r.originalName %></h4>
+                                      <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
+                                        <div class="score-ring__fill"></div>
+                                        <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                                      </div>
+                                    </div>
+                                    <p class="muted">Tap to select</p>
+                                  </div>
+                                <% }); %>
+                            </div>
+                            <input type="hidden" id="ctx-resume" value="">
+                        </div>
+                    </div>
                 </div>
-                <input type="hidden" id="ctx-resume" value="">
-                <label class="toggle-row">
-                    <input type="checkbox" id="ctx-silly">
-                    <span>Enable crazy mode (parody/fun tone, informal)</span>
-                </label>
-                <div id="custom-tone-block" class="hidden">
-                    <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
-                    <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+
+                <div class="modal-footer">
+                    <button type="submit" id="context-submit" class="btn-primary">Create new chat</button>
                 </div>
-                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
-                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.1" value="0.5">
-
-                <label for="ctx-style">Professionalism style (supportive -> direct) <span id="style-val" class="slider-val"></span></label>
-                <input type="range" id="ctx-style" min="0" max="1" step="0.1" value="0.5">
-
-                <label for="ctx-difficulty">Difficulty <span id="difficulty-val" class="slider-val"></span></label>
-                <input type="range" id="ctx-difficulty" min="0" max="1" step="0.1" value="0.5">
-
-                <button type="submit" class="btn-primary full-width" style="margin-top:14px;">Create new chat</button>
             </form>
         </div>
     </div>

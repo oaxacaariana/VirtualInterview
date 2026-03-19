@@ -19,11 +19,14 @@
         return 0;
       };
       const bars = [
-        { label: 'Skills alignment', val: b.skills_alignment, max: 30 },
-        { label: 'Experience relevance', val: b.experience_relevance, max: 25 },
-        { label: 'Education / certs', val: b.education_certifications, max: 15 },
-        { label: 'Role keywords', val: b.role_keywords, max: 15 },
-        { label: 'Achievements & impact', val: b.achievements_impact, max: 15 },
+        { label: 'Role fit', val: b.role_fit, max: 25 },
+        { label: 'Experience depth', val: b.experience_depth, max: 20 },
+        { label: 'Quantified impact', val: b.quantified_impact, max: 15 },
+        { label: 'Skills evidence', val: b.skills_evidence_alignment, max: 10 },
+        { label: 'Resume completeness', val: b.resume_completeness, max: 10 },
+        { label: 'Structure & clarity', val: b.professional_structure_clarity, max: 10 },
+        { label: 'Project quality', val: b.project_quality, max: 5 },
+        { label: 'Education / certs', val: b.education_certifications, max: 5 },
       ];
       const tier = typeof fitScore === 'number'
         ? (fitScore >= 85 ? 'Excellent match' : fitScore >= 70 ? 'Strong match' : fitScore >= 50 ? 'Partial match' : 'Needs alignment')
@@ -33,7 +36,7 @@
     <div class="results-hero">
         <div>
             <p class="eyebrow">Compatibility scoring</p>
-            <p class="muted">Powered by the new five-part rubric.</p>
+            <p class="muted">Powered by the stricter fit-plus-quality rubric.</p>
             <div class="pill-row">
                 <span class="pill">Resume: <%= resumeName %></span>
                 <% if (company) { %><span class="pill">Company: <%= company %></span><% } %>
@@ -51,9 +54,9 @@
                 <div class="score-ring__center" style="font-size:1.5rem;"><%= typeof fitScore === 'number' ? fitScore : '-' %></div>
             </div>
             <div class="score-meta">
-                <div class="score-title"><%= scoreTitle || 'Compatibility Score' %></div>
+                <div class="score-title"><%= scoreTitle || 'Resume Strength & Role Fit' %></div>
                 <div class="score-tier"><%= tier %></div>
-                <p class="muted">Total of all five components (max 100).</p>
+                <p class="muted">Total of all eight components, balancing role fit with resume quality.</p>
             </div>
         </div>
 
@@ -73,7 +76,7 @@
                 <% }) %>
                 <div class="bar-row total-row">
                     <div class="bar-label">
-                        <span>Compatibility Score</span>
+                        <span>Overall Score</span>
                         <span class="bar-value"><%= typeof fitScore === 'number' ? fitScore : '-' %>/100</span>
                     </div>
                     <div class="bar-track">
@@ -134,7 +137,7 @@
     </div>
 
     <div class="center">
-        <a href="/upload" class="btn-primary">Try Another Interview</a>
+        <a href="/upload" class="btn-primary">Try Another Resume</a>
     </div>
 
 </section>

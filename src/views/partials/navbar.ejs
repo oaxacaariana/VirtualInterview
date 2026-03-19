@@ -16,6 +16,7 @@
         <% if (currentUser) { %>
             <% if (activePath !== '/') { %><a href="/" class="btn-outline">Home</a><% } %>
             <% if (activePath !== '/resumes') { %><a href="/resumes" class="btn-outline">Resumes</a><% } %>
+            <% if (activePath !== '/openai/logs') { %><a href="/openai/logs" class="btn-outline">Chat Logs</a><% } %>
             <% if (activePath !== '/profile') { %><a href="/profile" class="btn-outline">Profile</a><% } %>
             <% if (activePath !== '/upload') { %><a href="/upload" class="btn-outline">Upload</a><% } %>
             <% if (activePath !== '/openai') { %><a href="/openai" class="btn-primary">AI-Powered Mock Interviewer</a><% } %>

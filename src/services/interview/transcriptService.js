@@ -7,26 +7,34 @@ const persistInterviewTurn = async ({
   chatId,
   model,
   transcript,
+  context,
+  questionAsked,
   prompt,
   reply,
+  review,
   status,
 }) => {
   try {
-    const upsertResult = await upsertChatTranscript({
+    const { upsertResult, turnDoc } = await upsertChatTranscript({
       collections,
       userId,
       sessionId,
       chatId,
       model,
       transcript,
+      context,
+      questionAsked,
       prompt,
       reply,
+      review,
       status,
     });
 
     if (!upsertResult.matchedCount && !upsertResult.upsertedCount) {
       console.warn('chatLog upsert neither matched nor upserted', { chatId, userId });
     }
+
+    return turnDoc;
   } catch (err) {
     console.error('Failed to persist chat log:', err);
     try {
@@ -37,6 +45,7 @@ const persistInterviewTurn = async ({
         chatId,
         model,
         transcript,
+        context,
         prompt,
         reply,
         status,
@@ -44,6 +53,7 @@ const persistInterviewTurn = async ({
     } catch (fallbackError) {
       console.error('Fallback insert for chat log also failed:', fallbackError);
     }
+    return null;
   }
 };
 

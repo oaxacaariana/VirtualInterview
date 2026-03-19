@@ -1,7 +1,11 @@
-const { ObjectId } = require('mongodb');
 const { getOpenAIClient, interviewModel } = require('../lib/openaiClient');
 const { toObjectId } = require('../repositories/resumeRepository');
-const { markChatClosed, listRecentChatsForUser } = require('../repositories/chatRepository');
+const { findInterviewScoreByChatId } = require('../repositories/interviewScoreRepository');
+const {
+  listRecentChatsForUser,
+  findChatLogByChatId,
+  listChatTurnsForChat,
+} = require('../repositories/chatRepository');
 const {
   requireConfiguredClient,
   validateStartInterviewInput,
@@ -11,6 +15,8 @@ const {
   mapResumesForView,
   startInterviewSession,
   continueInterview,
+  getTurnAnalysis,
+  finalizeInterview,
   ensureChatId,
 } = require('../services/interview/interviewService');
 
@@ -79,26 +85,104 @@ const startInterview = async (req, res) => {
 
 const closeChat = async (req, res) => {
   try {
-    const userId = (req.session?.user?.id && new ObjectId(req.session.user.id)) || null;
+    const openaiClient = getOpenAIClient();
+    requireConfiguredClient(openaiClient);
     const chatId = ensureChatId(req.body?.chatId);
-    const result = await markChatClosed({
+    const result = await finalizeInterview({
+      collections: req.app.locals.collections,
+      chatId,
+      sessionUser: req.session?.user,
+      sessionId: req.sessionID,
+      openaiClient,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    console.error('closeChat failed:', err);
+    return res.status(err.status || 500).json({ error: err.message || 'Failed to close chat.' });
+  }
+};
+
+const getReview = async (req, res) => {
+  try {
+    const result = await getTurnAnalysis({
+      collections: req.app.locals.collections,
+      sessionUser: req.session?.user,
+      chatId: req.query?.chatId,
+      turn: req.query?.turn,
+    });
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || 'Failed to load turn review.' });
+  }
+};
+
+const showChatLogsPage = async (req, res) => {
+  try {
+    const userId = toObjectId(req.session?.user?.id);
+    const docs = await listRecentChatsForUser({
+      collections: req.app.locals.collections,
+      userId,
+    });
+
+    const scoredChats = await Promise.all(
+      docs.map(async (chat) => ({
+        ...chat,
+        finalScore: await findInterviewScoreByChatId({
+          collections: req.app.locals.collections,
+          userId,
+          chatId: chat.chatId,
+        }),
+      }))
+    );
+
+    return res.render('chat-logs', { chats: scoredChats });
+  } catch (error) {
+    return res.status(500).render('chat-logs', { chats: [] });
+  }
+};
+
+const showChatLogDetail = async (req, res) => {
+  try {
+    const userId = toObjectId(req.session?.user?.id);
+    const chatId = ensureChatId(req.params.chatId);
+    const chat = await findChatLogByChatId({
       collections: req.app.locals.collections,
       chatId,
       userId,
     });
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Chat not found.' });
+    if (!chat) {
+      return res.status(404).send('Chat log not found.');
     }
 
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error('closeChat failed:', err);
-    return res.status(500).json({ error: 'Failed to close chat.' });
+    const turns = await listChatTurnsForChat({
+      collections: req.app.locals.collections,
+      chatId,
+      userId,
+    });
+
+    const finalScore = await findInterviewScoreByChatId({
+      collections: req.app.locals.collections,
+      userId,
+      chatId,
+    });
+
+    return res.render('chat-log-detail', { chat, turns, finalScore });
+  } catch (error) {
+    return res.status(500).send(error.message || 'Failed to load chat log.');
   }
 };
 
-module.exports = { showOpenAIPage, askOpenAI, startInterview, closeChat };
+module.exports = {
+  showOpenAIPage,
+  askOpenAI,
+  startInterview,
+  closeChat,
+  getReview,
+  showChatLogsPage,
+  showChatLogDetail,
+};
 
 module.exports.listTranscripts = async (req, res) => {
   try {

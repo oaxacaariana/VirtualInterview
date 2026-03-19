@@ -20,10 +20,8 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-if (!process.env.SESSION_SECRET) {
-  console.warn(
-    'Warning: SESSION_SECRET is not set. Using an insecure development fallback; set SESSION_SECRET before production use.'
-  );
+if (isProduction && !process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET must be set before starting the app in production.');
 }
 
 app.set('view engine', 'ejs');

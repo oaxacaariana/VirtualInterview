@@ -34,8 +34,41 @@ const generateBackgroundNote = async ({ openaiClient, resumeText, company, role,
   }
 };
 
-const loadInterviewContext = async ({ collections, sessionUser, openaiClient, resumeId, company, role }) => {
-  const resumeDoc = await findOwnedResumeById(collections, sessionUser, resumeId, { activeOnly: true });
+const buildCachedInterviewContext = ({
+  resumeDoc,
+  resumeText,
+  webSignals,
+  researchSummary,
+  jobDescription,
+  company,
+  role,
+}) => ({
+  resumeDoc,
+  resumeText,
+  webSignals,
+  researchSummary,
+  jobDescription,
+  backgroundDoc: buildBackgroundDoc({
+    resumeText,
+    company,
+    role,
+    researchSummary,
+    jobDescription,
+  }),
+});
+
+const loadInterviewContext = async ({
+  collections,
+  sessionUser,
+  openaiClient,
+  resumeId,
+  company,
+  role,
+  activeOnly = true,
+  includeResearch = true,
+  webSearchEnabled = true,
+}) => {
+  const resumeDoc = await findOwnedResumeById(collections, sessionUser, resumeId, { activeOnly });
   if (!resumeDoc) {
     const error = new Error('Resume not found.');
     error.status = 404;
@@ -47,29 +80,40 @@ const loadInterviewContext = async ({ collections, sessionUser, openaiClient, re
     resumeText = (await parseResumeToText(resumeDoc.path)).slice(0, 8000);
   }
 
-  const webSignals = await fetchWebResearch({ company, role, openaiClient });
-  const researchSummary = await generateBackgroundNote({
-    openaiClient,
-    resumeText,
-    company,
-    role,
-    webSignals,
-  });
+  let webSignals = '';
+  let researchSummary = '';
+  if (includeResearch && webSearchEnabled) {
+    webSignals = await fetchWebResearch({ company, role, openaiClient });
+    researchSummary = await generateBackgroundNote({
+      openaiClient,
+      resumeText,
+      company,
+      role,
+      webSignals,
+    });
+  }
 
-  return {
+  let latestResumeScore = null;
+  if (collections?.resumeScores) {
+    latestResumeScore = await collections.resumeScores
+      .find({ resumeId: resumeDoc._id })
+      .sort({ createdAt: -1 })
+      .limit(1)
+      .next();
+  }
+
+  return buildCachedInterviewContext({
     resumeDoc,
     resumeText,
     webSignals,
     researchSummary,
-    backgroundDoc: buildBackgroundDoc({
-      resumeText,
-      company,
-      role,
-      researchSummary,
-    }),
-  };
+    jobDescription: latestResumeScore?.jobSnippet || '',
+    company,
+    role,
+  });
 };
 
 module.exports = {
+  buildCachedInterviewContext,
   loadInterviewContext,
 };

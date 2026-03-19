@@ -32,6 +32,10 @@ async function connectDb(app) {
       { userId: 1, createdAt: -1 },
       { name: 'user_scores' }
     ),
+    collections.interviewScores.createIndex(
+      { userId: 1, chatId: 1 },
+      { name: 'user_chat_score', unique: true }
+    ),
     collections.resumeScores.createIndex(
       { userId: 1, createdAt: -1 },
       { name: 'user_resume_scores' }

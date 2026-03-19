@@ -56,6 +56,30 @@ const clampScore = (value, max) => {
   return Math.min(Math.max(Math.round(num), 0), max);
 };
 
+const applyQualityCaps = (score, breakdown) => {
+  const capped = Number(score) || 0;
+
+  // Do not allow obviously thin resumes to pass as strong matches just because keywords line up.
+  if (
+    breakdown.resume_completeness <= 4 ||
+    breakdown.professional_structure_clarity <= 4 ||
+    breakdown.experience_depth <= 8
+  ) {
+    return Math.min(capped, 59);
+  }
+
+  if (
+    breakdown.resume_completeness <= 6 ||
+    breakdown.professional_structure_clarity <= 6 ||
+    breakdown.skills_evidence_alignment <= 5 ||
+    breakdown.project_quality <= 2
+  ) {
+    return Math.min(capped, 69);
+  }
+
+  return capped;
+};
+
 const getFitAssessment = async ({ resumeText, jobDescription, company, webResearch }) => {
   const completion = await client.chat.completions.create({
     model,
@@ -66,12 +90,26 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
         role: 'system',
         content: [
           `You are a hiring manager at ${company || 'the target company'}.`,
-          'Analyze how well the candidate fits the specific company and job.',
-          "Compare the candidate's skills, experience, education, and achievements against the job description and inferred company expectations.",
+          'Evaluate both role fit and resume quality with a strict standard.',
+          "Compare the candidate's skills, experience, education, project depth, and written evidence against the job description and inferred company expectations.",
+          'Do not reward a resume just because it contains relevant keywords.',
+          'A sparse, skeletal, or underdeveloped resume must be penalized even if the candidate seems qualified on paper.',
           'Return JSON only (no prose) with keys and ranges:',
-          'title, skills_alignment (0-30), experience_relevance (0-25), education_certifications (0-15), role_keywords (0-15), achievements_impact (0-15), compatibility_score (0-100), positives (array of strengths), negatives (array of risks/gaps), summary (2-3 concise sentences).',
+          'title, role_fit (0-25), experience_depth (0-20), quantified_impact (0-15), skills_evidence_alignment (0-10), resume_completeness (0-10), professional_structure_clarity (0-10), project_quality (0-5), education_certifications (0-5), compatibility_score (0-100), positives (array of strengths), negatives (array of risks/gaps), summary (2-4 concise sentences).',
           'For education_certifications: grant full points when the job description states "no degree required", "degree optional", or prefers experience over formal education, unless the resume explicitly conflicts (e.g., lacks a required certification that IS specified). Do not penalize missing degrees when the posting says it is not required.',
-          'compatibility_score must equal the sum of the five components, capped at 100. Make sure math is correct.',
+          'If skills are listed but not demonstrated through experience or projects, reduce skills_evidence_alignment.',
+          'If projects are vague, tiny, or missing technical detail, scale, tooling, architecture, or outcomes, reduce project_quality.',
+          'If experience bullets are short, generic, or lacking measurable impact, reduce experience_depth and quantified_impact.',
+          'If the resume is missing common professional detail that would improve credibility, reduce resume_completeness and professional_structure_clarity.',
+          'A bare-bones resume with only one-line roles, shallow project blurbs, missing education, weak tooling evidence, or vague claims should score poorly even if the technology names match the job.',
+          'Strong resumes must show verifiable expertise through implementation detail, scope, ownership, technical decisions, tools, architecture, and outcomes.',
+          'Do not treat claims like "worked on scalable systems", "improved reliability", or "built APIs" as strong evidence unless the resume explains how, with what stack, at what scale, and with what result.',
+          'Missing sections such as education, links, location, or fuller experience detail should count against completeness when they would normally be expected for a mid-level software engineer.',
+          'If the resume reads like notes or an outline instead of a polished professional document, score structure and completeness harshly.',
+          'A thin resume cannot receive an excellent overall score.',
+          'A resume that feels unfinished, vague, or underexplained should not pass as a strong hire recommendation.',
+          'Score only what is explicitly written. Do not infer missing quality from candidate potential.',
+          'compatibility_score must equal the sum of the eight components, capped at 100. Make sure math is correct.',
           'If resume or job description is missing/unreadable, set all numeric values to 0 and explain in negatives.',
           `Use these web research cues for context: ${webResearch || 'none available'}.`,
           'Do not add sentences, explanations, or extra keys outside the JSON.'
@@ -100,16 +138,19 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
   }
 
   const breakdown = {
-    skills_alignment: clampScore(parsed.skills_alignment, 30),
-    experience_relevance: clampScore(parsed.experience_relevance, 25),
-    education_certifications: clampScore(parsed.education_certifications, 15),
-    role_keywords: clampScore(parsed.role_keywords, 15),
-    achievements_impact: clampScore(parsed.achievements_impact, 15),
+    role_fit: clampScore(parsed.role_fit, 25),
+    experience_depth: clampScore(parsed.experience_depth, 20),
+    quantified_impact: clampScore(parsed.quantified_impact, 15),
+    skills_evidence_alignment: clampScore(parsed.skills_evidence_alignment, 10),
+    resume_completeness: clampScore(parsed.resume_completeness, 10),
+    professional_structure_clarity: clampScore(parsed.professional_structure_clarity, 10),
+    project_quality: clampScore(parsed.project_quality, 5),
+    education_certifications: clampScore(parsed.education_certifications, 5),
   };
 
   const computedTotal = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
-  const compatibility_score = Math.min(100, computedTotal);
-  const title = (parsed.title || 'Compatibility Score').toString().trim() || 'Compatibility Score';
+  const compatibility_score = applyQualityCaps(Math.min(100, computedTotal), breakdown);
+  const title = (parsed.title || 'Resume Strength & Role Fit').toString().trim() || 'Resume Strength & Role Fit';
 
   return {
     title,
@@ -140,7 +181,7 @@ const handleUpload = async (req, res) => {
       resumeSizeKb: null,
       resumeId: null,
       scoreBreakdown: null,
-      scoreTitle: 'Compatibility Score',
+      scoreTitle: 'Resume Strength & Role Fit',
       ringColor: ringColorForScore(null),
     });
   }
@@ -168,7 +209,7 @@ const handleUpload = async (req, res) => {
 
   let fitScore = 'Pending';
   let scoreBreakdown = null;
-  let scoreTitle = 'Compatibility Score';
+  let scoreTitle = 'Resume Strength & Role Fit';
   let positives = [];
   let negatives = [];
   let summary = '';

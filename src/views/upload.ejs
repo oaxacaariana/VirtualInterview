@@ -14,14 +14,14 @@
         <div class="form-container">
             <h1>Score Your Resume</h1>
             <p class="form-subtext">
-                Upload your PDF resume with the job description and company name.
+                Upload your PDF or DOCX resume with the job description and company name.
                 We’ll generate a fit score and targeted feedback for that role.
             </p>
 
             <form action="/upload" method="POST" enctype="multipart/form-data">
 
-                <label>Upload Resume (PDF)</label>
-                <input type="file" name="resume" required>
+                <label>Upload Resume (PDF or DOCX)</label>
+                <input type="file" name="resume" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
 
                 <label>Company Name</label>
                 <input type="text" name="company" placeholder="e.g., Google, Deloitte..." required>
@@ -36,7 +36,7 @@
         </div>
         <div class="form-visual">
             <p class="eyebrow">Fast scoring</p>
-            <h3>PDF only. Keep it clean & keyword rich.</h3>
+            <h3>PDF or DOCX. Keep it clean and keyword rich.</h3>
             <p class="muted">Your file stays local; we store just metadata and parsed text for scoring.</p>
             <img class="accent-illu" alt="Upload illustration" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 180'%3E%3Cdefs%3E%3ClinearGradient id='u' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%236b5bff'/%3E%3Cstop offset='1' stop-color='%2325f3ce'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='14' y='18' width='192' height='140' rx='18' fill='%23141418' stroke='%23222'/%3E%3Cpath d='M70 110l40-46 40 46' stroke='url(%23u)' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='92' y='112' width='36' height='30' rx='6' fill='%23222' stroke='%233a7bfd'/%3E%3Ccircle cx='62' cy='54' r='8' fill='%23f0a202'/%3E%3Ccircle cx='170' cy='46' r='6' fill='%23f65fb1'/%3E%3C/svg%3E">
         </div>

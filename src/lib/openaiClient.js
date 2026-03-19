@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 
 const interviewModel = process.env.MODEL || 'gpt-4.1-mini';
+const reviewModel = process.env.REVIEW_MODEL || interviewModel;
 let client;
 
 const getOpenAIClient = () => {
@@ -18,4 +19,5 @@ const getOpenAIClient = () => {
 module.exports = {
   getOpenAIClient,
   interviewModel,
+  reviewModel,
 };
