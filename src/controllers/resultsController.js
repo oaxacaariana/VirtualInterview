@@ -1,22 +1,46 @@
 const { ObjectId } = require('mongodb');
 const { ringColorForScore } = require('../utils/scoreColors');
 
+const toObjectId = (id) => {
+  try {
+    return typeof id === 'string' ? new ObjectId(id) : id;
+  } catch {
+    return null;
+  }
+};
+
+const buildOwnedResumeFilter = (req, resumeId) => {
+  const userId = toObjectId(req.session?.user?.id);
+  if (!resumeId || !userId) return null;
+
+  return {
+    _id: resumeId,
+    $or: [
+      { userId },
+      { userId: req.session?.user?.id || null },
+    ],
+  };
+};
+
 const showResultsPage = async (req, res) => {
   const resumeIdParam = req.query?.resumeId;
-  const resumeIdObj = resumeIdParam ? new ObjectId(resumeIdParam) : null;
+  const resumeIdObj = toObjectId(resumeIdParam);
+  const resumeFilter = buildOwnedResumeFilter(req, resumeIdObj);
 
-  if (resumeIdObj && req.app.locals.collections?.resumeScores) {
+  if (resumeFilter && req.app.locals.collections?.resumeScores) {
     const scoresCol = req.app.locals.collections.resumeScores;
     const filesCol = req.app.locals.collections.resumeFiles;
 
-    const scoreDoc = await scoresCol
-      .find({ resumeId: resumeIdObj })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .next();
-
     const fileDoc = filesCol
-      ? await filesCol.findOne({ _id: resumeIdObj })
+      ? await filesCol.findOne(resumeFilter)
+      : null;
+
+    const scoreDoc = fileDoc
+      ? await scoresCol
+          .find({ resumeId: resumeIdObj })
+          .sort({ createdAt: -1 })
+          .limit(1)
+          .next()
       : null;
 
     if (scoreDoc || fileDoc) {

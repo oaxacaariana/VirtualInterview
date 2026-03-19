@@ -11,19 +11,32 @@ const openaiRouter = require('./routes/openai');
 const authRouter = require('./routes/auth');
 const profileRouter = require('./routes/profile');
 const resumesRouter = require('./routes/resumes');
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = process.env.SESSION_SECRET || 'dev-only-insecure-session-secret';
 
 // creates the uploads folder if it doesn't exist for the user yet
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+if (!process.env.SESSION_SECRET) {
+  console.warn(
+    'Warning: SESSION_SECRET is not set. Using an insecure development fallback; set SESSION_SECRET before production use.'
+  );
 }
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, 'uploads'), {
+  express.static(uploadsDir, {
     maxAge: '30d',
     immutable: true,
   })
@@ -31,9 +44,18 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'changeme-session-secret',
+  name: 'virtual_interview.sid',
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
+  proxy: isProduction,
+  unset: 'destroy',
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
 }));
 
 // simple auth guard

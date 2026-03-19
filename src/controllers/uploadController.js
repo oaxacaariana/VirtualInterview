@@ -8,6 +8,27 @@ const { ringColorForScore } = require('../utils/scoreColors');
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.MODEL || 'gpt-4.1-mini';
 
+const toObjectId = (id) => {
+  try {
+    return typeof id === 'string' ? new ObjectId(id) : id;
+  } catch {
+    return null;
+  }
+};
+
+const buildOwnedResumeFilter = (req, resumeId) => {
+  const userId = toObjectId(req.session?.user?.id);
+  if (!resumeId || !userId) return null;
+
+  return {
+    _id: resumeId,
+    $or: [
+      { userId },
+      { userId: req.session?.user?.id || null },
+    ],
+  };
+};
+
 const showUploadPage = (req, res) => {
   res.render('upload'); 
 };
@@ -225,18 +246,18 @@ const handleUpload = async (req, res) => {
 const viewResume = async (req, res) => {
   const { id } = req.params;
   const collection = req.app.locals.collections?.resumeFiles;
+  const resumeId = toObjectId(id);
+  const resumeFilter = buildOwnedResumeFilter(req, resumeId);
 
   if (!collection) {
     return res.status(500).send('resumeFiles collection not available');
   }
 
-  let doc;
-  try {
-    doc = await collection.findOne({ _id: new ObjectId(id) });
-  } catch (error) {
-    console.error('Invalid resume id:', error);
+  if (!resumeFilter) {
     return res.status(400).send('Invalid resume id.');
   }
+
+  const doc = await collection.findOne(resumeFilter);
 
   if (!doc) {
     return res.status(404).send('Resume not found.');
