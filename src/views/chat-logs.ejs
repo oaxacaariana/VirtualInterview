@@ -23,7 +23,8 @@
             <div class="resumes-grid">
                 <% chats.forEach(chat => { %>
                     <%
-                        const score = typeof chat.finalScore?.overallScore === 'number' ? chat.finalScore.overallScore : null;
+                        const rawScore = chat.finalScore?.overallScore;
+                        const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
                         const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
                         const ringColor = score === null
                           ? '#555'
@@ -37,7 +38,17 @@
                           : score >= 70 ? 'Strong'
                           : score >= 50 ? 'Partial'
                           : 'Needs work';
-                        const gradeLetter = ((chat.finalScore?.grade || 'P').toString().trim().charAt(0) || 'P').toUpperCase();
+                        const storedGradeLetter = ((chat.finalScore?.grade || '').toString().trim().charAt(0) || '').toUpperCase();
+                        const derivedGradeLetter = score === null
+                          ? 'P'
+                          : score >= 85 ? 'A'
+                          : score >= 70 ? 'B'
+                          : score >= 50 ? 'C'
+                          : score >= 35 ? 'D'
+                          : 'F';
+                        const gradeLetter = ['A', 'B', 'C', 'D', 'F'].includes(storedGradeLetter)
+                          ? storedGradeLetter
+                          : derivedGradeLetter;
                         const gradeClass = gradeLetter === 'A' ? 'grade-a'
                           : gradeLetter === 'B' ? 'grade-b'
                           : gradeLetter === 'C' ? 'grade-c'

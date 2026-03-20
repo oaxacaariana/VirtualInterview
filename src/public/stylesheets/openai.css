@@ -19,11 +19,21 @@
     box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
 }
 
-.chat-header {
+.chat-header,
+.review-block__head,
+.coach-card__head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     gap: 16px;
+}
+
+.chat-header,
+.review-block__head,
+.coach-card__head {
+    align-items: flex-start;
+}
+
+.chat-header {
     padding-bottom: 14px;
     border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
@@ -190,14 +200,6 @@
     box-shadow: 0 22px 50px rgba(0, 0, 0, 0.28);
 }
 
-.review-block__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
 .review-block__actions {
     display: flex;
     align-items: center;
@@ -234,14 +236,6 @@
     border: 1px solid rgba(148, 163, 184, 0.10);
     border-radius: 18px;
     padding: 16px;
-}
-
-.coach-card__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
 }
 
 .coach-card__head h4,
@@ -450,15 +444,12 @@
 
 .final-bar__track {
     height: 10px;
-    border-radius: 999px;
     background: rgba(15, 23, 42, 0.86);
-    overflow: hidden;
-    border: 1px solid rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.14);
 }
 
 .final-bar__fill {
     height: 100%;
-    width: var(--fill, 0%);
     border-radius: 999px;
     background: linear-gradient(90deg, #60a5fa, #2dd4bf);
 }

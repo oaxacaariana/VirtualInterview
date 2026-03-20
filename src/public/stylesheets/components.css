@@ -6,8 +6,8 @@
 }
 
 .resume-card {
-    border-radius: 14px;
-    border: 1px solid #1f2a38;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-strong);
     padding: 18px;
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -15,7 +15,7 @@
 .resume-card:hover {
     transform: translateY(-2px);
     border-color: #4c5bff;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+    box-shadow: var(--shadow-hover);
 }
 
 .resume-card__top {
@@ -72,11 +72,11 @@
 }
 
 .glass {
-    background: #12141d;
-    border: 1px solid #1f2a38;
-    border-radius: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
     padding: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.03);
     text-align: left;
 }
 
@@ -106,15 +106,11 @@
     box-shadow: 0 8px 24px rgba(45, 212, 191, 0.35);
 }
 
-.score-ring {
-    width: 72px;
-    height: 72px;
-    position: relative;
-}
-
+.score-ring,
 .score-ring-lg {
     width: 72px;
     height: 72px;
+    position: relative;
 }
 
 .score-ring__fill {
@@ -167,7 +163,9 @@
     margin-bottom: 6px;
 }
 
-.bar-mini__track {
+.bar-track,
+.bar-mini__track,
+.final-bar__track {
     position: relative;
     height: 8px;
     background: #1b1f2d;
@@ -176,7 +174,9 @@
     border: 1px solid #263449;
 }
 
-.bar-mini__fill {
+.bar-fill,
+.bar-mini__fill,
+.final-bar__fill {
     position: absolute;
     inset: 0;
     width: var(--fill, 0%);
@@ -217,9 +217,9 @@
 .chat-grade-card:hover {
     border-color: var(--hover-border, #4c5bff);
     box-shadow:
-        0 18px 38px var(--hover-glow, rgba(76, 91, 255, 0.20)),
-        0 0 24px var(--hover-glow-soft, rgba(76, 91, 255, 0.14)),
-        inset 0 0 0 1px var(--hover-glow-soft, rgba(76, 91, 255, 0.12));
+        0 0 0 1px var(--hover-glow-soft, rgba(76, 91, 255, 0.14)),
+        0 18px 38px var(--hover-glow-soft, rgba(76, 91, 255, 0.16)),
+        0 0 28px var(--hover-glow, rgba(76, 91, 255, 0.20));
 }
 
 .chat-grade-card .resume-card__top {
@@ -252,7 +252,6 @@
 
 .chat-grade-card.grade-a {
     border-color: rgba(45, 212, 191, 0.58);
-    box-shadow: 0 16px 36px rgba(10, 20, 18, 0.30), inset 0 0 0 1px rgba(45, 212, 191, 0.12);
     --grade-surface: rgba(8, 33, 29, 0.96);
     --hover-border: rgba(45, 212, 191, 0.92);
     --hover-glow: rgba(45, 212, 191, 0.28);
@@ -267,7 +266,6 @@
 
 .chat-grade-card.grade-b {
     border-color: rgba(96, 165, 250, 0.58);
-    box-shadow: 0 16px 36px rgba(12, 18, 29, 0.30), inset 0 0 0 1px rgba(96, 165, 250, 0.12);
     --grade-surface: rgba(12, 27, 49, 0.96);
     --hover-border: rgba(96, 165, 250, 0.92);
     --hover-glow: rgba(96, 165, 250, 0.28);
@@ -282,7 +280,6 @@
 
 .chat-grade-card.grade-c {
     border-color: rgba(240, 162, 2, 0.60);
-    box-shadow: 0 16px 36px rgba(26, 20, 10, 0.30), inset 0 0 0 1px rgba(240, 162, 2, 0.12);
     --grade-surface: rgba(42, 28, 8, 0.96);
     --hover-border: rgba(240, 162, 2, 0.94);
     --hover-glow: rgba(240, 162, 2, 0.28);
@@ -297,7 +294,6 @@
 
 .chat-grade-card.grade-d {
     border-color: rgba(251, 146, 60, 0.62);
-    box-shadow: 0 16px 36px rgba(27, 18, 10, 0.30), inset 0 0 0 1px rgba(251, 146, 60, 0.12);
     --grade-surface: rgba(48, 23, 10, 0.96);
     --hover-border: rgba(251, 146, 60, 0.94);
     --hover-glow: rgba(251, 146, 60, 0.28);
@@ -312,7 +308,6 @@
 
 .chat-grade-card.grade-f {
     border-color: rgba(246, 95, 95, 0.64);
-    box-shadow: 0 16px 36px rgba(28, 12, 16, 0.30), inset 0 0 0 1px rgba(246, 95, 95, 0.12);
     --grade-surface: rgba(46, 12, 18, 0.96);
     --hover-border: rgba(246, 95, 95, 0.94);
     --hover-glow: rgba(246, 95, 95, 0.28);
@@ -394,13 +389,13 @@
 }
 
 .modal-card {
-    background: #181818;
-    border: 1px solid #222;
-    border-radius: 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-muted);
+    border-radius: var(--radius-lg);
     padding: 24px;
     width: 90%;
     max-width: 640px;
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--shadow-elevated);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -414,9 +409,14 @@
     border-color: rgba(96, 165, 250, 0.14);
 }
 
-.modal-head {
+.modal-head,
+.setup-card__head {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
+}
+
+.modal-head {
     align-items: center;
     margin-bottom: 10px;
 }
@@ -450,14 +450,6 @@
     padding: 18px;
     display: flex;
     flex-direction: column;
-}
-
-.setup-card__head {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 14px;
 }
 
 .setup-card__head h4 {

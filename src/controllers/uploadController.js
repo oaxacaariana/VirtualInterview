@@ -50,14 +50,34 @@ const inferRoleFromJobDescription = (desc) => {
   return firstLine.trim().slice(0, 120);
 };
 
+const clamp01 = (value, fallback = 0.5) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(1, Math.max(0, num));
+};
+
+const isEnabledField = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['on', 'true', '1', 'yes'].includes(normalized)) return true;
+    if (['off', 'false', '0', 'no'].includes(normalized)) return false;
+  }
+  return fallback;
+};
+
 const clampScore = (value, max) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
   return Math.min(Math.max(Math.round(num), 0), max);
 };
 
-const applyQualityCaps = (score, breakdown) => {
+const applyQualityCaps = (score, breakdown, strictness = 0.5) => {
   const capped = Number(score) || 0;
+  const strictnessLevel = clamp01(strictness);
+
+  const severeCap = strictnessLevel >= 0.75 ? 52 : strictnessLevel >= 0.6 ? 55 : 59;
+  const moderateCap = strictnessLevel >= 0.75 ? 62 : strictnessLevel >= 0.6 ? 65 : 69;
 
   // Do not allow obviously thin resumes to pass as strong matches just because keywords line up.
   if (
@@ -65,7 +85,7 @@ const applyQualityCaps = (score, breakdown) => {
     breakdown.professional_structure_clarity <= 4 ||
     breakdown.experience_depth <= 8
   ) {
-    return Math.min(capped, 59);
+    return Math.min(capped, severeCap);
   }
 
   if (
@@ -74,13 +94,50 @@ const applyQualityCaps = (score, breakdown) => {
     breakdown.skills_evidence_alignment <= 5 ||
     breakdown.project_quality <= 2
   ) {
-    return Math.min(capped, 69);
+    return Math.min(capped, moderateCap);
   }
 
   return capped;
 };
 
-const getFitAssessment = async ({ resumeText, jobDescription, company, webResearch }) => {
+const getStrictnessPrompt = (strictness = 0.5) => {
+  const level = clamp01(strictness);
+
+  if (level >= 0.8) {
+    return [
+      'Scoring strictness: very high.',
+      'Use a highly skeptical hiring bar.',
+      'Only reward clearly proven depth, strong evidence, and repeated specificity.',
+      'Thin or underexplained resumes should score sharply lower.',
+      'Do not let a resume feel strong unless it would hold up under close recruiter and hiring-manager review.',
+    ].join(' ');
+  }
+
+  if (level >= 0.6) {
+    return [
+      'Scoring strictness: high.',
+      'Be more demanding than average.',
+      'Penalize resumes that are light on context, detail, ownership, or demonstrated impact.',
+      'Do not give the benefit of the doubt when the evidence is incomplete.',
+    ].join(' ');
+  }
+
+  if (level <= 0.25) {
+    return [
+      'Scoring strictness: low.',
+      'Still be honest, but allow somewhat more benefit of the doubt for concise resumes if they show some relevant alignment and measurable impact.',
+    ].join(' ');
+  }
+
+  return [
+    'Scoring strictness: standard.',
+    'Use a balanced but still evidence-based hiring standard.',
+  ].join(' ');
+};
+
+const getFitAssessment = async ({ resumeText, jobDescription, company, webResearch, strictness = 0.5 }) => {
+  const strictnessValue = clamp01(strictness);
+  const strictnessPrompt = getStrictnessPrompt(strictnessValue);
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.4,
@@ -91,9 +148,14 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
         content: [
           `You are a hiring manager at ${company || 'the target company'}.`,
           'Evaluate both role fit and resume quality with a strict standard.',
+          strictnessPrompt,
+          'Be skeptical and conservative. Do not assume competence from brevity, polish, or keyword overlap.',
           "Compare the candidate's skills, experience, education, project depth, and written evidence against the job description and inferred company expectations.",
           'Do not reward a resume just because it contains relevant keywords.',
           'A sparse, skeletal, or underdeveloped resume must be penalized even if the candidate seems qualified on paper.',
+          'Treat technology mentions as weak evidence unless the resume shows how the technology was used, in what context, with what ownership, and with what result.',
+          'A short resume is not automatically a strong resume. Concision without evidence should lower the score, not raise it.',
+          'Do not fill in missing detail with optimistic assumptions.',
           'Return JSON only (no prose) with keys and ranges:',
           'title, role_fit (0-25), experience_depth (0-20), quantified_impact (0-15), skills_evidence_alignment (0-10), resume_completeness (0-10), professional_structure_clarity (0-10), project_quality (0-5), education_certifications (0-5), compatibility_score (0-100), positives (array of strengths), negatives (array of risks/gaps), summary (2-4 concise sentences).',
           'For education_certifications: grant full points when the job description states "no degree required", "degree optional", or prefers experience over formal education, unless the resume explicitly conflicts (e.g., lacks a required certification that IS specified). Do not penalize missing degrees when the posting says it is not required.',
@@ -101,6 +163,12 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
           'If projects are vague, tiny, or missing technical detail, scale, tooling, architecture, or outcomes, reduce project_quality.',
           'If experience bullets are short, generic, or lacking measurable impact, reduce experience_depth and quantified_impact.',
           'If the resume is missing common professional detail that would improve credibility, reduce resume_completeness and professional_structure_clarity.',
+          'Explicitly penalize resumes that read like an outline, notes, or a sparse checklist rather than a full professional resume.',
+          'A few strong-sounding verbs or 1-2 metrics must not outweigh broad missing detail elsewhere.',
+          'If impact is mentioned but not well contextualized, treat it as partial evidence only.',
+          'If projects are only named without explanation, they should contribute little or nothing to project_quality.',
+          'If a bullet says "built APIs", "improved reliability", "worked on scalable systems", or similar generic claims without technical context, scale, constraints, tooling, architecture, or outcome detail, score it conservatively.',
+          'For mid-level engineering roles, missing education, links, location, testing practices, collaboration context, deployment context, or clearer scope can count against completeness when the resume already appears thin.',
           'A bare-bones resume with only one-line roles, shallow project blurbs, missing education, weak tooling evidence, or vague claims should score poorly even if the technology names match the job.',
           'Strong resumes must show verifiable expertise through implementation detail, scope, ownership, technical decisions, tools, architecture, and outcomes.',
           'Do not treat claims like "worked on scalable systems", "improved reliability", or "built APIs" as strong evidence unless the resume explains how, with what stack, at what scale, and with what result.',
@@ -108,6 +176,9 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
           'If the resume reads like notes or an outline instead of a polished professional document, score structure and completeness harshly.',
           'A thin resume cannot receive an excellent overall score.',
           'A resume that feels unfinished, vague, or underexplained should not pass as a strong hire recommendation.',
+          'Do not award a score above 69 unless the resume shows repeated concrete evidence across multiple bullets and sections.',
+          'Do not award a score above 79 unless the resume shows clear depth, specificity, role alignment, and multiple well-supported outcomes.',
+          'If you are uncertain because the resume is too thin, score lower rather than higher.',
           'Score only what is explicitly written. Do not infer missing quality from candidate potential.',
           'compatibility_score must equal the sum of the eight components, capped at 100. Make sure math is correct.',
           'If resume or job description is missing/unreadable, set all numeric values to 0 and explain in negatives.',
@@ -149,7 +220,7 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
   };
 
   const computedTotal = Object.values(breakdown).reduce((sum, val) => sum + val, 0);
-  const compatibility_score = applyQualityCaps(Math.min(100, computedTotal), breakdown);
+  const compatibility_score = applyQualityCaps(Math.min(100, computedTotal), breakdown, strictnessValue);
   const title = (parsed.title || 'Resume Strength & Role Fit').toString().trim() || 'Resume Strength & Role Fit';
 
   return {
@@ -163,11 +234,13 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
 };
 
 const handleUpload = async (req, res) => {
-  const { company = '', jobDescription = '' } = req.body || {};
+  const { company = '', jobDescription = '', strictness = 0.5 } = req.body || {};
   const jobDescForLLM = jobDescription.slice(0, 4000); // allow longer input for scoring
   const jobDescForDisplay = jobDescription.slice(0, 700); // keep display concise
   const userObjectId = req.session?.user?.id ? new ObjectId(req.session.user.id) : null;
   const inferredRole = inferRoleFromJobDescription(jobDescription);
+  const strictnessValue = clamp01(strictness);
+  const webSearchEnabled = isEnabledField(req.body?.webSearchEnabled, true);
 
   if (!req.file) {
     return res.status(400).render('results', {
@@ -220,17 +293,20 @@ const handleUpload = async (req, res) => {
   } else {
     try {
       const resumeText = await readResumeText(resumeDoc.path);
-      const { summary: webSummary } = await runWebResearch({
-        client,
-        company,
-        role: inferredRole,
-      });
+      const { summary: webSummary } = webSearchEnabled
+        ? await runWebResearch({
+            client,
+            company,
+            role: inferredRole,
+          })
+        : { summary: '', bullets: [] };
       webResearchSummary = webSummary || '';
       const assessment = await getFitAssessment({
         resumeText,
         jobDescription: jobDescForLLM,
         company,
         webResearch: webResearchSummary,
+        strictness: strictnessValue,
       });
       if (assessment) {
         fitScore = assessment.compatibility_score ?? fitScore;

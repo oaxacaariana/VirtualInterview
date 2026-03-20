@@ -9,7 +9,11 @@
     }
 
     .coach-grid,
-    .final-score-hero {
+    .final-score-hero,
+    .landing-grid,
+    .hero-metrics,
+    .upload-shell,
+    .hero-grid-home {
         grid-template-columns: 1fr;
     }
 
@@ -34,6 +38,10 @@
     .hero {
         padding: 80px 30px;
     }
+
+    .upload-intro {
+        position: static;
+    }
 }
 
 @media (max-width: 640px) {
@@ -44,15 +52,36 @@
     }
 
     .hero,
-    .features,
-    .how-it-works,
     .footer1,
-    .ai-shell {
+    .ai-shell,
+    .upload-page,
+    .feature-rail-section,
+    .landing-grid-section {
         padding-left: 20px;
         padding-right: 20px;
     }
 
     .accent-illu {
         max-width: 280px;
+    }
+
+    .section-shell {
+        width: 100%;
+    }
+
+    .section-head,
+    .footer-cta__inner,
+    .hero-dashboard__top {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .feature-rail {
+        grid-auto-columns: 84%;
+    }
+
+    .upload-intro h1,
+    .hero-home h1 {
+        font-size: 2.15rem;
     }
 }

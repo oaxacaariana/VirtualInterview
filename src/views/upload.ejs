@@ -9,49 +9,113 @@
 
 <%- include('partials/navbar'); %>
 
-<section class="form-section">
-    <div class="form-shell">
-        <div class="form-container">
-            <h1>Score Your Resume</h1>
-            <p class="form-subtext">
-                Upload your PDF or DOCX resume with the job description and company name.
-                We’ll generate a fit score and targeted feedback for that role.
+<section class="upload-page">
+    <div class="section-shell upload-shell">
+        <div class="upload-intro glass">
+            <p class="eyebrow">Resume scoring lab</p>
+            <h1>Pressure-test the resume before the interview starts.</h1>
+            <p>
+                Upload your PDF or DOCX, paste the real job description, then decide how tough the scoring should be and whether company web research should influence the result.
             </p>
 
-            <form action="/upload" method="POST" enctype="multipart/form-data">
-
-                <label>Upload Resume (PDF or DOCX)</label>
-                <input type="file" name="resume" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
-
-                <label>Company Name</label>
-                <input type="text" name="company" placeholder="e.g., Google, Deloitte..." required>
-
-                <label>Job Description</label>
-                <textarea name="jobDescription" rows="8" maxlength="4000" placeholder="Paste job description here (up to 4000 characters)..." required></textarea>
-
-                <button id="upload-submit" type="submit" class="btn-primary full-width">
-                    Upload Resume
-                </button>
-            </form>
+            <div class="upload-feature-list">
+                <div class="upload-feature glass">
+                    <strong>Role-fit breakdown</strong>
+                    <span>Get a score based on evidence, impact, completeness, and project depth.</span>
+                </div>
+                <div class="upload-feature glass">
+                    <strong>Strictness control</strong>
+                    <span>Push the scorer harder when you want less generous assumptions.</span>
+                </div>
+                <div class="upload-feature glass">
+                    <strong>Optional web context</strong>
+                    <span>Use company and role context when you want a more situational evaluation.</span>
+                </div>
+            </div>
         </div>
-        <div class="form-visual">
-            <p class="eyebrow">Fast scoring</p>
-            <h3>PDF or DOCX. Keep it clean and keyword rich.</h3>
-            <p class="muted">Your file stays local; we store just metadata and parsed text for scoring.</p>
-            <img class="accent-illu" alt="Upload illustration" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 180'%3E%3Cdefs%3E%3ClinearGradient id='u' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%236b5bff'/%3E%3Cstop offset='1' stop-color='%2325f3ce'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='14' y='18' width='192' height='140' rx='18' fill='%23141418' stroke='%23222'/%3E%3Cpath d='M70 110l40-46 40 46' stroke='url(%23u)' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='92' y='112' width='36' height='30' rx='6' fill='%23222' stroke='%233a7bfd'/%3E%3Ccircle cx='62' cy='54' r='8' fill='%23f0a202'/%3E%3Ccircle cx='170' cy='46' r='6' fill='%23f65fb1'/%3E%3C/svg%3E">
+
+        <div class="upload-form-wrap">
+            <div class="form-container upload-form-card">
+                <p class="eyebrow">Resume input</p>
+                <h2>Upload and score</h2>
+                <p class="form-subtext">
+                    Keep the job description specific. The tighter the target, the more useful the score becomes.
+                </p>
+
+                <form action="/upload" method="POST" enctype="multipart/form-data">
+                    <label>Upload Resume (PDF or DOCX)</label>
+                    <input type="file" name="resume" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+
+                    <label>Company Name</label>
+                    <input type="text" name="company" placeholder="e.g., Google, Deloitte..." required>
+
+                    <label>Job Description</label>
+                    <textarea name="jobDescription" rows="8" maxlength="4000" placeholder="Paste job description here (up to 4000 characters)..." required></textarea>
+
+                    <div class="setup-card upload-controls-card">
+                        <div class="setup-card__head">
+                            <div>
+                                <p class="eyebrow">Scoring controls</p>
+                                <h4>Tune the evaluator</h4>
+                            </div>
+                            <p class="muted">Decide how skeptical the scoring should be.</p>
+                        </div>
+
+                        <div class="slider-stack">
+                            <label for="strictness">Scoring strictness <span id="strictness-val" class="slider-val"></span></label>
+                            <input type="range" id="strictness" name="strictness" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+
+                        <div class="setup-switches">
+                            <label class="switch-row">
+                                <span>
+                                    <strong>Web research</strong>
+                                    <small class="muted">Pull external company and role context before scoring.</small>
+                                </span>
+                                <span class="switch">
+                                    <input type="checkbox" id="web-search-enabled" name="webSearchEnabled" checked>
+                                    <span class="switch-ui"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button id="upload-submit" type="submit" class="btn-primary full-width">
+                        Upload Resume
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </section>
 
 <div id="loading-overlay" class="loading-overlay hidden">
     <div class="loader"></div>
-    <p>Scoring your resume…</p>
+    <p>Scoring your resume...</p>
 </div>
 
 <script>
     const uploadForm = document.querySelector('form');
     const overlay = document.getElementById('loading-overlay');
     const submitBtn = document.getElementById('upload-submit');
+    const strictnessInput = document.getElementById('strictness');
+    const strictnessVal = document.getElementById('strictness-val');
+
+    const updateStrictnessLabel = () => {
+        const value = Number(strictnessInput.value);
+        strictnessInput.style.setProperty('--slider-progress', `${Math.round(value * 100)}%`);
+        strictnessVal.textContent =
+            value >= 0.8 ? 'Very high'
+            : value >= 0.6 ? 'High'
+            : value <= 0.2 ? 'Low'
+            : 'Standard';
+    };
+
+    strictnessInput.addEventListener('pointerdown', () => strictnessInput.classList.add('is-sliding'));
+    strictnessInput.addEventListener('pointerup', () => strictnessInput.classList.remove('is-sliding'));
+    strictnessInput.addEventListener('pointerleave', () => strictnessInput.classList.remove('is-sliding'));
+    updateStrictnessLabel();
+    strictnessInput.addEventListener('input', updateStrictnessLabel);
 
     uploadForm.addEventListener('submit', () => {
         overlay.classList.remove('hidden');
@@ -60,6 +124,6 @@
     });
 </script>
 
-    <%- include('partials/footer'); %>
+<%- include('partials/footer'); %>
 </body>
 </html>
