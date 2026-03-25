@@ -23,7 +23,7 @@ async function connectDb(app) {
 
   await Promise.all([
     collections.users.createIndex({ username: 1 }, { unique: true }),
-    collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }, { name: 'user_transcripts' }),
+    collections.chatLogs.createIndex({ userId: 1, createdAt: -1 }, { name: 'user_transcripts' }).catch(() => {}),
     collections.chatLogs.createIndex({ chatId: 1 }, { name: 'chat_lookup' }),
     collections.chatLogs.createIndex({ sessionId: 1 }, { name: 'session_lookup' }),
     collections.chatTurns.createIndex({ chatId: 1, turn: 1 }, { name: 'chat_turns' }),
