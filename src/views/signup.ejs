@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up | Virtual Interview</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Virtual Interview Simulator</div>
+        <div class="nav-links">
+            <a href="/" class="btn-outline">Home</a>
+            <a href="/login" class="btn-outline">Login</a>
+        </div>
+    </nav>
+
+    <section class="form-section">
+        <div class="form-container">
+            <h1>Create account</h1>
+            <p class="form-subtext">Simple username + password to access all tools.</p>
+            <% if (error) { %>
+                <p style="color:#f88;"><%= error %></p>
+            <% } %>
+            <form action="/signup" method="POST">
+                <label>Username</label>
+                <input type="text" name="username" required>
+
+                <label>Name (optional)</label>
+                <input type="text" name="name" placeholder="How should we greet you?">
+
+                <label>Password</label>
+                <input type="password" name="password" required>
+
+                <button type="submit" class="btn-primary full-width">Create Account</button>
+            </form>
+        </div>
+    </section>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Logs | Virtual Interview</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="results-section" style="text-align:left;">
+        <div class="results-hero" style="align-items:flex-start;">
+            <div>
+                <p class="eyebrow">Interview archive</p>
+                <h1 style="margin:2px 0 6px;">Chat logs</h1>
+                <p class="muted">Recent mock interviews with the saved setup and completion status.</p>
+            </div>
+            <div class="pill-row">
+                <a href="/openai" class="btn-primary">Back to interview</a>
+            </div>
+        </div>
+
+        <% if (chats && chats.length) { %>
+            <div class="resumes-grid">
+                <% chats.forEach(chat => { %>
+                    <%
+                        const rawScore = chat.finalScore?.overallScore;
+                        const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
+                        const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
+                        const ringColor = score === null
+                          ? '#555'
+                          : score >= 80 ? '#2dd4bf'
+                          : score >= 65 ? '#60a5fa'
+                          : score >= 50 ? '#f0a202'
+                          : '#f65f5f';
+                        const tier = score === null
+                          ? 'Pending'
+                          : score >= 85 ? 'Excellent'
+                          : score >= 70 ? 'Strong'
+                          : score >= 50 ? 'Partial'
+                          : 'Needs work';
+                        const storedGradeLetter = ((chat.finalScore?.grade || '').toString().trim().charAt(0) || '').toUpperCase();
+                        const derivedGradeLetter = score === null
+                          ? 'P'
+                          : score >= 85 ? 'A'
+                          : score >= 70 ? 'B'
+                          : score >= 50 ? 'C'
+                          : score >= 35 ? 'D'
+                          : 'F';
+                        const gradeLetter = ['A', 'B', 'C', 'D', 'F'].includes(storedGradeLetter)
+                          ? storedGradeLetter
+                          : derivedGradeLetter;
+                        const gradeClass = gradeLetter === 'A' ? 'grade-a'
+                          : gradeLetter === 'B' ? 'grade-b'
+                          : gradeLetter === 'C' ? 'grade-c'
+                          : gradeLetter === 'D' ? 'grade-d'
+                          : gradeLetter === 'F' ? 'grade-f'
+                          : 'grade-pending';
+                    %>
+                    <a href="/openai/logs/<%= chat.chatId %>" class="resume-card glass chat-log-card-link chat-grade-card <%= gradeClass %>">
+                        <div class="chat-grade-card__letter"><%= gradeLetter %></div>
+                        <div class="resume-card__top">
+                            <div class="resume-card__meta">
+                                <h3 class="resume-title"><%= chat.context?.role || 'Interview' %></h3>
+                                <p class="muted" style="margin-top:4px;">Company: <%= chat.context?.company || 'Not set' %></p>
+                                <div class="pill-row" style="margin-top:10px;">
+                                    <span class="pill">Status: <%= chat.status || 'unknown' %></span>
+                                    <span class="pill">Updated: <%= chat.updatedAt ? new Date(chat.updatedAt).toISOString().slice(0,16).replace('T',' ') : 'n/a' %></span>
+                                    <span class="pill">Difficulty: <%= chat.context?.difficulty ?? 0.5 %></span>
+                                </div>
+                            </div>
+                            <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= ringColor %>; flex-shrink:0;">
+                                <div class="score-ring__fill"></div>
+                                <div class="score-ring__center"><%= score === null ? '-' : score %></div>
+                            </div>
+                        </div>
+                    </a>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <p class="muted" style="text-align:center; margin-top:30px;">No chat logs yet.</p>
+        <% } %>
+    </section>
+</body>
+</html>

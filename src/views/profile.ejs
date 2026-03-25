@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile | Virtual Interview</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="form-section" style="padding-top:40px;">
+        <div class="form-container">
+            <h1>Your Profile</h1>
+            <p class="form-subtext">Update your display name or password.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 16px;">
+              <a href="/resumes" class="btn-outline">Resumes</a>
+              <a href="/resumes?archived=1" class="btn-outline">Archived Resumes</a>
+            </div>
+            <% if (error) { %><p style="color:#f88;"><%= error %></p><% } %>
+            <% if (success) { %><p style="color:#6f6;"><%= success %></p><% } %>
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+              <% 
+                const nameSafe = (user && (user.name || user.username)) || 'User';
+                const initials = nameSafe.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+              %>
+              <div class="nav-avatar" style="width:64px;height:64px;"><%= initials %></div>
+            </div>
+            <form action="/profile" method="POST">
+                <label>Username</label>
+                <input type="text" value="<%= (user && user.username) ? user.username : '' %>" disabled>
+
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Your name" value="<%= (user && user.name) ? user.name : '' %>">
+
+                <label>New Password (leave blank to keep current)</label>
+                <input type="password" name="password" placeholder="********">
+
+                <button type="submit" class="btn-primary full-width">Save Changes</button>
+            </form>
+
+            <form action="/logout" method="POST" style="margin-top:16px;">
+                <button type="submit" class="btn-danger full-width">Logout</button>
+            </form>
+        </div>
+    </section>
+    <%- include('partials/footer'); %>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Interview Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+
+    <%- include('partials/navbar'); %>
+
+    <section class="hero hero-home">
+        <div class="hero-grid hero-grid-home">
+            <div class="hero-content hero-content-home">
+                <div class="pill-row hero-pills">
+                    <span class="pill">Resume scoring</span>
+                    <span class="pill">Mock interviews</span>
+                    <span class="pill">Coach feedback</span>
+                </div>
+                <h1>Train like the interview is already scheduled.</h1>
+                <p>
+                    Upload your resume, pressure-test it against a real job description, then jump into a mock interview that adapts to your target role, company, and chosen tone.
+                </p>
+                <div class="hero-cta-row">
+                    <a href="/upload" class="btn-primary">Score your resume</a>
+                    <a href="/openai" class="btn-outline">Start a mock interview</a>
+                </div>
+                <div class="hero-metrics">
+                    <div class="hero-metric glass">
+                        <strong>Resume fit</strong>
+                        <span>See whether your resume feels job-ready or still reads thin.</span>
+                    </div>
+                    <div class="hero-metric glass">
+                        <strong>Interview pressure</strong>
+                        <span>Dial seriousness, directness, and difficulty before you practice.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual hero-visual-home">
+                <div class="hero-dashboard glass">
+                    <div class="hero-dashboard__top">
+                        <div>
+                            <p class="eyebrow">Live workflow</p>
+                            <h3>From resume to final review</h3>
+                        </div>
+                        <span class="hero-badge">Practice stack</span>
+                    </div>
+                    <div class="hero-dashboard__stack">
+                        <div class="hero-stage">
+                            <span class="hero-stage__num">01</span>
+                            <div>
+                                <strong>Upload + score</strong>
+                                <p>Compare resume quality, completeness, impact, and role fit.</p>
+                            </div>
+                        </div>
+                        <div class="hero-stage">
+                            <span class="hero-stage__num">02</span>
+                            <div>
+                                <strong>Tailored interview</strong>
+                                <p>Bring in company context, resume highlights, and adjustable interviewer behavior.</p>
+                            </div>
+                        </div>
+                        <div class="hero-stage">
+                            <span class="hero-stage__num">03</span>
+                            <div>
+                                <strong>Saved feedback</strong>
+                                <p>Keep transcripts, revisit scorecards, and spot patterns across sessions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="feature-rail-section">
+        <div class="section-shell">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">What it does</p>
+                    <h2>Scroll through the full prep flow</h2>
+                </div>
+                <div class="rail-actions">
+                    <button type="button" class="rail-btn" id="rail-prev" aria-label="Scroll left">&lsaquo;</button>
+                    <button type="button" class="rail-btn" id="rail-next" aria-label="Scroll right">&rsaquo;</button>
+                </div>
+            </div>
+
+            <div class="feature-rail" id="feature-rail">
+                <article class="feature-slide glass">
+                    <p class="eyebrow">Resume audit</p>
+                    <h3>See whether your resume is actually convincing</h3>
+                    <p>Score role fit, depth, impact, completeness, structure, and project quality instead of just counting keywords.</p>
+                    <ul class="card-list">
+                        <li>Strictness slider for harsher scoring</li>
+                        <li>Optional web research for company context</li>
+                        <li>Saved scorecards you can revisit later</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide glass">
+                    <p class="eyebrow">Interview setup</p>
+                    <h3>Tune the interviewer before the first question</h3>
+                    <p>Pick a resume, set the company and role, and control how intense or playful the session feels.</p>
+                    <ul class="card-list">
+                        <li>Seriousness, style, and difficulty sliders</li>
+                        <li>Optional crazy mode</li>
+                        <li>Company-aware questioning flow</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide glass">
+                    <p class="eyebrow">Mock interview</p>
+                    <h3>Practice in a back-and-forth that feels less scripted</h3>
+                    <p>The interviewer keeps context from your resume and target role, asks one main question at a time, and reacts to your actual answers.</p>
+                    <ul class="card-list">
+                        <li>Resume-backed questioning</li>
+                        <li>Voice dictation support</li>
+                        <li>Saved transcript history</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide glass">
+                    <p class="eyebrow">Review loop</p>
+                    <h3>Catch the patterns that keep repeating</h3>
+                    <p>Use final interview reviews and archived chats to see whether your answers are getting sharper, more specific, and more role-aligned.</p>
+                    <ul class="card-list">
+                        <li>Final grading after the interview closes</li>
+                        <li>Chat log archive by role and company</li>
+                        <li>Per-session score summaries</li>
+                    </ul>
+                </article>
+
+                <article class="feature-slide glass">
+                    <p class="eyebrow">Workflow fit</p>
+                    <h3>Move between tools without losing context</h3>
+                    <p>Score a resume, pick it for an interview, then use the saved conversation and review to decide what to fix next.</p>
+                    <ul class="card-list">
+                        <li>Resume vault with archive support</li>
+                        <li>Results pages tied to uploaded files</li>
+                        <li>Interview setup built from your saved resumes</li>
+                    </ul>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="landing-grid-section">
+        <div class="section-shell landing-grid">
+            <div class="landing-card glass">
+                <p class="eyebrow">Why it feels different</p>
+                <h3>Not just a chatbot, not just a resume checker</h3>
+                <p>This app connects the full prep cycle: resume quality, company context, interview behavior, and saved post-session review.</p>
+            </div>
+            <div class="landing-card glass">
+                <p class="eyebrow">Best use case</p>
+                <h3>Great for role-specific prep</h3>
+                <p>Bring in a real job description and use the scoring plus interview workflow together to find where your story still feels thin.</p>
+            </div>
+            <div class="landing-card glass">
+                <p class="eyebrow">Current strength</p>
+                <h3>Fast iteration</h3>
+                <p>Upload, score, adjust, and re-run quickly so each pass gets tighter before the real interview shows up on your calendar.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="footer1 footer-cta">
+        <div class="section-shell footer-cta__inner">
+            <div>
+                <p class="eyebrow">Start now</p>
+                <h2>Build the version of your resume and interview story that can survive scrutiny.</h2>
+                <p>Use the score to find weak spots, then stress-test your answers in the mock interview.</p>
+            </div>
+            <div class="hero-cta-row">
+                <a href="/upload" class="btn-primary">Upload resume</a>
+                <a href="/openai" class="btn-outline">Open interviewer</a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const featureRail = document.getElementById('feature-rail');
+        const railPrev = document.getElementById('rail-prev');
+        const railNext = document.getElementById('rail-next');
+
+        if (featureRail && railPrev && railNext) {
+            const scrollRail = (direction) => {
+                const amount = Math.min(featureRail.clientWidth * 0.9, 420);
+                featureRail.scrollBy({ left: amount * direction, behavior: 'smooth' });
+            };
+
+            railPrev.addEventListener('click', () => scrollRail(-1));
+            railNext.addEventListener('click', () => scrollRail(1));
+        }
+    </script>
+
+    <%- include('partials/footer'); %>
+
+</body>
+</html>

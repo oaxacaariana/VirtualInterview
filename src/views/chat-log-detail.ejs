@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Log Detail | Virtual Interview</title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="results-section chat-log-page">
+        <div class="results-hero chat-log-hero" style="align-items:flex-start;">
+            <div>
+                <p class="eyebrow">Interview replay</p>
+                <h1 style="margin:2px 0 6px;"><%= chat.context?.role || 'Interview' %></h1>
+                <p class="muted">Company: <%= chat.context?.company || 'Not set' %></p>
+                <div class="pill-row" style="margin-top:10px;">
+                    <span class="pill">Status: <%= chat.status || 'unknown' %></span>
+                    <span class="pill">Difficulty: <%= chat.context?.difficulty ?? 0.5 %></span>
+                    <span class="pill">Complexity: <%= chat.context?.complexity ?? 0.5 %></span>
+                    <span class="pill">Style: <%= chat.context?.style ?? 0.5 %></span>
+                    <span class="pill">Seriousness: <%= chat.context?.seriousness ?? 0.5 %></span>
+                    <span class="pill">Web search: <%= chat.context?.webSearchEnabled === false ? 'Off' : 'On' %></span>
+                    <span class="pill">Crazy mode: <%= chat.context?.silly ? 'On' : 'Off' %></span>
+                </div>
+            </div>
+            <div class="pill-row">
+                <a href="/openai/logs" class="btn-outline">Back to logs</a>
+                <a href="/openai" class="btn-primary">Open interviewer</a>
+            </div>
+        </div>
+
+        <div class="ai-shell chat-log-shell">
+            <div class="chat-window">
+                <div class="chat-header">
+                    <div>
+                        <p class="eyebrow">Transcript</p>
+                        <h3>Interview conversation</h3>
+                        <p class="muted">Click one of your answers to inspect the saved advice in the sidebar.</p>
+                    </div>
+                </div>
+
+                <div class="chat-log chat-log-static">
+                    <% turns.forEach((turn, index) => { %>
+                        <div class="chat-turn-block">
+                            <% if (index === 0 && turn.questionAsked) { %>
+                                <div class="bubble ai chat-log-bubble">
+                                    <div class="bubble__text"><%= turn.questionAsked %></div>
+                                </div>
+                            <% } %>
+
+                            <div
+                                class="bubble user chat-log-bubble log-turn-trigger"
+                                data-turn="<%= turn.turn %>"
+                                data-answer="<%= encodeURIComponent(turn.prompt || '') %>"
+                                data-has-review="<%= turn.review ? '1' : '0' %>"
+                                data-summary="<%= encodeURIComponent(turn.review?.summary || '') %>"
+                                data-verdict="<%= turn.review?.verdict || '' %>"
+                                data-positives="<%= encodeURIComponent(JSON.stringify(turn.review?.positives || [])) %>"
+                                data-negatives="<%= encodeURIComponent(JSON.stringify(turn.review?.negatives || [])) %>"
+                            >
+                                <div class="bubble__text"><%= turn.prompt || 'No answer saved.' %></div>
+                                <% if (turn.review) { %>
+                                    <div class="bubble-analysis <%= turn.review.verdict === 'strong' ? 'is-strong' : turn.review.verdict === 'weak' ? 'is-weak' : 'is-mixed' %>">
+                                        <span class="bubble-analysis__pill"><%= turn.review.verdict === 'strong' ? 'Strong' : turn.review.verdict === 'weak' ? 'Needs work' : 'Mixed' %></span>
+                                    </div>
+                                <% } %>
+                            </div>
+
+                            <% if (turn.reply) { %>
+                                <div class="bubble ai chat-log-bubble chat-log-bubble-followup">
+                                    <div class="bubble__text"><%= turn.reply %></div>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+
+            <aside class="feedback-panel review-rail">
+                <div class="review-block review-block-final">
+                    <div class="review-tabs">
+                        <button type="button" class="review-tab active" data-tab-target="turn-advice-panel">Turn advice</button>
+                        <button type="button" class="review-tab" data-tab-target="final-score-tab-panel">Final score</button>
+                    </div>
+
+                    <div id="turn-advice-panel" class="review-tab-panel active">
+                        <div id="log-turn-advice-panel" class="analysis-panel">
+                            <div class="coach-empty">
+                                <p class="coach-empty__title">Select a saved answer.</p>
+                                <p class="muted">The turn-by-turn positives and negatives will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="final-score-tab-panel" class="review-tab-panel">
+                        <% if (finalScore) { %>
+                            <%
+                              const overallScore = Number(finalScore.overallScore) || 0;
+                              const ringColor =
+                                overallScore >= 80 ? '#2dd4bf' :
+                                overallScore >= 65 ? '#60a5fa' :
+                                overallScore >= 50 ? '#f0a202' : '#f65f5f';
+                              const bars = [
+                                ['Relevance', finalScore.rubric?.relevance || 0],
+                                ['STAR', finalScore.rubric?.star || 0],
+                                ['Role fit', finalScore.rubric?.roleAlignment || 0],
+                                ['Clarity', finalScore.rubric?.clarity || 0],
+                                ['Confidence', finalScore.rubric?.confidence || 0],
+                              ];
+                            %>
+                            <div class="final-score-shell">
+                                <div class="final-score-hero">
+                                    <div class="score-ring results-ring final-score-ring" style="--score:<%= overallScore * 3.6 %>deg; --ring-color:<%= ringColor %>;">
+                                        <div class="score-ring__fill"></div>
+                                        <div class="score-ring__center"><%= overallScore %></div>
+                                    </div>
+                                    <div class="final-score-meta">
+                                        <p class="coach-card__eyebrow">Final grade</p>
+                                        <h4><%= finalScore.grade || 'Pending' %></h4>
+                                        <p class="muted"><%= finalScore.summary || 'No summary saved.' %></p>
+                                    </div>
+                                </div>
+
+                                <div class="final-pill-row">
+                                    <span class="final-pill">Strongest: <%= finalScore.strongestArea || 'n/a' %></span>
+                                    <span class="final-pill">Weakest: <%= finalScore.weakestArea || 'n/a' %></span>
+                                    <span class="final-pill">Turns reviewed: <%= finalScore.reviewedTurns || turns.length %></span>
+                                </div>
+
+                                <div class="final-bars">
+                                    <% bars.forEach(([label, score]) => { %>
+                                        <div class="final-bar">
+                                            <div class="final-bar__label">
+                                                <span><%= label %></span>
+                                                <span><%= score %>/10</span>
+                                            </div>
+                                            <div class="final-bar__track">
+                                                <div class="final-bar__fill" style="--fill:<%= Math.max(0, Math.min(100, Number(score) * 10)) %>%"></div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+
+                                <div class="coach-grid">
+                                    <div class="coach-list coach-list-positive">
+                                        <p>Strengths</p>
+                                        <ul>
+                                            <% (finalScore.strengths || []).forEach(item => { %>
+                                                <li><%= item %></li>
+                                            <% }) %>
+                                        </ul>
+                                    </div>
+                                    <div class="coach-list coach-list-negative">
+                                        <p>Fix next</p>
+                                        <ul>
+                                            <% (finalScore.improvements || []).forEach(item => { %>
+                                                <li><%= item %></li>
+                                            <% }) %>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="coach-card coach-card-patterns">
+                                    <p class="coach-card__eyebrow">Interview pattern</p>
+                                    <p><%= finalScore.patterns || 'No pattern analysis saved.' %></p>
+                                </div>
+                            </div>
+                        <% } else { %>
+                            <div class="final-score-shell is-empty">
+                                <p class="coach-empty__title">No final score saved.</p>
+                                <p class="muted">This interview may have been closed before the final grading pass completed.</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <script>
+        const advicePanel = document.getElementById('log-turn-advice-panel');
+        const turnTriggers = document.querySelectorAll('.log-turn-trigger');
+        const tabs = document.querySelectorAll('.review-tab');
+        const tabPanels = document.querySelectorAll('.review-tab-panel');
+
+        const decode = (value) => {
+            try {
+                return decodeURIComponent(value || '');
+            } catch {
+                return value || '';
+            }
+        };
+
+        const escapeHtml = (value) =>
+            String(value ?? '')
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+              .replaceAll("'", '&#39;');
+
+        const verdictLabel = (verdict) => {
+            if (verdict === 'strong') return 'Strong';
+            if (verdict === 'weak') return 'Needs work';
+            return 'Mixed';
+        };
+
+        const verdictClass = (verdict) => {
+            if (verdict === 'strong') return 'is-strong';
+            if (verdict === 'weak') return 'is-weak';
+            return 'is-mixed';
+        };
+
+        const renderTurnAdvice = (node) => {
+            const turn = node.dataset.turn;
+            const answer = decode(node.dataset.answer);
+            const hasReview = node.dataset.hasReview === '1';
+
+            if (!hasReview) {
+                advicePanel.innerHTML = `
+                    <div class="coach-card">
+                        <p class="coach-card__eyebrow">Turn ${escapeHtml(turn)}</p>
+                        <p class="coach-card__answer">${escapeHtml(answer)}</p>
+                        <p class="muted">No saved advice is available for this response.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const summary = decode(node.dataset.summary);
+            const verdict = node.dataset.verdict || 'mixed';
+            const positives = JSON.parse(decode(node.dataset.positives || '%5B%5D'));
+            const negatives = JSON.parse(decode(node.dataset.negatives || '%5B%5D'));
+
+            advicePanel.innerHTML = `
+                <div class="coach-card">
+                    <div class="coach-card__head">
+                        <div>
+                            <p class="coach-card__eyebrow">Turn ${escapeHtml(turn)} review</p>
+                            <h4>Response read</h4>
+                        </div>
+                        <span class="verdict-pill ${verdictClass(verdict)}">${escapeHtml(verdictLabel(verdict))}</span>
+                    </div>
+                    <p class="coach-card__answer">${escapeHtml(answer)}</p>
+                    <p class="coach-card__summary">${escapeHtml(summary)}</p>
+                    <div class="coach-grid">
+                        <div class="coach-list coach-list-positive">
+                            <p>Positives</p>
+                            <ul>${positives.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+                        </div>
+                        <div class="coach-list coach-list-negative">
+                            <p>Negatives</p>
+                            <ul>${negatives.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        turnTriggers.forEach((node) => {
+            node.addEventListener('click', () => {
+                turnTriggers.forEach((item) => item.classList.remove('is-selected'));
+                node.classList.add('is-selected');
+                tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tabTarget === 'turn-advice-panel'));
+                tabPanels.forEach((panel) => panel.classList.toggle('active', panel.id === 'turn-advice-panel'));
+                renderTurnAdvice(node);
+            });
+        });
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tabTarget;
+                tabs.forEach((item) => item.classList.toggle('active', item === tab));
+                tabPanels.forEach((panel) => panel.classList.toggle('active', panel.id === target));
+            });
+        });
+    </script>
+</body>
+</html>
