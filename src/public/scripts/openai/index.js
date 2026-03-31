@@ -4,6 +4,7 @@ import { createContextModal } from './contextModal.js';
 import { createInitialState, createEmptyContext, replaceState } from './state.js';
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
+console.log(faceapi)
 
 const elements = {
   chatLog: document.getElementById('chat-log'),
@@ -12,6 +13,7 @@ const elements = {
   statusDot: document.getElementById('ai-status'),
   setupBtn: document.getElementById('setup-btn'),
   contextBtn: document.getElementById('context-btn'),
+  cameraBtn: document.getElementById('camera-btn'),
   endBtn: document.getElementById('end-btn'),
   sendBtn: document.getElementById('send-btn'),
   micBtn: document.getElementById('mic-btn'),
@@ -365,6 +367,52 @@ elements.setupBtn.addEventListener('click', () => {
   contextModal.setMode('view');
   contextModal.open();
 });
+
+
+elements.cameraBtn.addEventListener('click', () => {
+  const run = async () => {
+    const videoFeedEl = document.getElementById('video-feed')
+    const cameraContainer = document.querySelector('.camera-container')
+
+    if (videoFeedEl.srcObject) {
+      // Remove each track from the stream and set the video's source to null
+      console.log('closing camera')
+      videoFeedEl.srcObject.getTracks().forEach(track => {
+        track.stop()
+      })
+      videoFeedEl.srcObject = null
+      cameraContainer.classList.remove('active')
+    }
+    else {
+      // Set the video's stream to the user's camera
+      console.log('opening camera')
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      })
+      videoFeedEl.srcObject = stream
+      cameraContainer.classList.add('active')
+
+      // Loading models for pre-trained machine learning facial detection agent
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri('../../models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('../../models'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('../../models'),
+        faceapi.nets.ageGenderNet.loadFromUri('../../models'),
+        faceapi.nets.faceExpressionNet.loadFromUri('../../models')
+      ])
+
+      // Gather face data from frame of video per interval
+      setInterval(async () => {
+        let faceAIData = await faceapi.detectAllFaces(videoFeedEl).withFaceLandmarks().withFaceDescriptors().withAgeAndGender().withFaceExpressions()
+        console.log(faceAIData)
+      }, 500)
+    }
+  }
+  run()
+});
+
+
 
 elements.endBtn.addEventListener('click', async () => {
   await completeInterview('Interview marked complete. Thanks for practicing!');
