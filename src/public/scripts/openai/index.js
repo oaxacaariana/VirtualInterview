@@ -4,7 +4,6 @@ import { createContextModal } from './contextModal.js';
 import { createInitialState, createEmptyContext, replaceState } from './state.js';
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
-console.log(faceapi)
 
 const elements = {
   chatLog: document.getElementById('chat-log'),
@@ -368,51 +367,98 @@ elements.setupBtn.addEventListener('click', () => {
   contextModal.open();
 });
 
+const videoFeedEl = document.getElementById('video-feed');
+const cameraContainer = document.querySelector('.camera-container');
+const dot = document.getElementById('gaze-dot');
+const smoothing = 0.15;
 
-elements.cameraBtn.addEventListener('click', () => {
-  const run = async () => {
-    const videoFeedEl = document.getElementById('video-feed')
-    const cameraContainer = document.querySelector('.camera-container')
+let webgazerInitialized = false;
+let currentX = 0;
+let currentY = 0;
+let targetX = 0;
+let targetY = 0;
 
-    if (videoFeedEl.srcObject) {
-      // Remove each track from the stream and set the video's source to null
-      console.log('closing camera')
-      videoFeedEl.srcObject.getTracks().forEach(track => {
-        track.stop()
-      })
-      videoFeedEl.srcObject = null
-      cameraContainer.classList.remove('active')
+// Turns the camera on and begins facial expression and eye detection
+async function startCamera() {
+  console.log('Starting camera');
+  // Set the video's stream to the user's camera
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: false
+  });
+  videoFeedEl.srcObject = stream;
+  cameraContainer.classList.add('active');
+
+  // Loading models for pre-trained machine learning facial detection agent
+  await Promise.all([
+    faceapi.nets.ssdMobilenetv1.loadFromUri('../../models'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('../../models'),
+    faceapi.nets.faceRecognitionNet.loadFromUri('../../models'),
+    faceapi.nets.ageGenderNet.loadFromUri('../../models'),
+    faceapi.nets.faceExpressionNet.loadFromUri('../../models')
+  ]);
+
+  // Gather face data from frame of video per interval
+  setInterval(async () => {
+    let faceAIData = await faceapi.detectAllFaces(videoFeedEl).withFaceLandmarks().withFaceDescriptors().withAgeAndGender().withFaceExpressions();
+    console.log(faceAIData);
+  }, 500);
+
+  // Initialize webgazer
+  if (!webgazerInitialized) {
+    console.log('Initializing webgazer');
+    webgazer.setGazeListener((data, elapsedTime) => {
+      if (data == null) {
+        return;
+      }
+      targetX = data.x;
+      targetY = data.y;
+      console.log(elapsedTime);
+    }).begin();
+
+    // Smoothly move dot around screen
+    function animate() {
+      currentX += (targetX - currentX) * smoothing;
+      currentY += (targetY - currentY) * smoothing;
+
+      dot.style.left = currentX + "px";
+      dot.style.top = currentY + "px";
+      requestAnimationFrame(animate);
     }
-    else {
-      // Set the video's stream to the user's camera
-      console.log('opening camera')
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false
-      })
-      videoFeedEl.srcObject = stream
-      cameraContainer.classList.add('active')
-
-      // Loading models for pre-trained machine learning facial detection agent
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri('../../models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('../../models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('../../models'),
-        faceapi.nets.ageGenderNet.loadFromUri('../../models'),
-        faceapi.nets.faceExpressionNet.loadFromUri('../../models')
-      ])
-
-      // Gather face data from frame of video per interval
-      setInterval(async () => {
-        let faceAIData = await faceapi.detectAllFaces(videoFeedEl).withFaceLandmarks().withFaceDescriptors().withAgeAndGender().withFaceExpressions()
-        console.log(faceAIData)
-      }, 500)
-    }
+    animate();
+    webgazerInitialized = true;
   }
-  run()
+  else {
+    // Resume webgazer
+    webgazer.resume();
+  }
+}
+
+// Turns the camera video tracks off and the expression and eye tracking
+function stopCamera() {
+  console.log('Stopping Camera');
+  // If there are no video tracks
+  if (!videoFeedEl.srcObject) {
+    return;
+  }
+  else {
+    // Remove the track from the stream and set the video's source to null
+    videoFeedEl.srcObject.getTracks().forEach(track => track.stop());
+    videoFeedEl.srcObject = null;
+    cameraContainer.classList.remove('active');
+
+    // Pause the webgazer
+    webgazer.pause();
+  }
+}
+
+elements.cameraBtn.addEventListener('click', async () => {
+  if (videoFeedEl.srcObject) {
+    stopCamera();
+  } else {
+    await startCamera();
+  }
 });
-
-
 
 elements.endBtn.addEventListener('click', async () => {
   await completeInterview('Interview marked complete. Thanks for practicing!');
