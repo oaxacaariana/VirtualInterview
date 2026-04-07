@@ -11,7 +11,9 @@ window.onload = async function() {
         .begin();
         webgazer.showVideoPreview(true) /* shows all video previews */
             .showPredictionPoints(true) /* shows a square every 100 milliseconds where current prediction is */
-            .applyKalmanFilter(true); /* Kalman Filter defaults to on. Can be toggled by user. */
+            .applyKalmanFilter(true) /* Kalman Filter defaults to on. Can be toggled by user. */
+            .showFaceOverlay(false)
+            .showFaceFeedbackBox(false); 
 
     //Set up the webgazer video feedback.
     var setup = function() {
@@ -40,5 +42,5 @@ function Restart(){
     document.getElementById("Accuracy").innerHTML = "<a>Not yet Calibrated</a>";
     webgazer.clearData();
     ClearCalibration();
-    PopUpInstruction();
+    PopUpInstruction(); 
 }

@@ -11,6 +11,7 @@ const openaiRouter = require('./routes/openai');
 const authRouter = require('./routes/auth');
 const profileRouter = require('./routes/profile');
 const resumesRouter = require('./routes/resumes');
+const calibrationRouter = require('./routes/calibration');
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SESSION_SECRET || 'dev-only-insecure-session-secret';
@@ -79,6 +80,7 @@ app.use('/upload', requireAuth, uploadRouter);
 app.use('/results', requireAuth, resultsRouter);
 app.use('/profile', requireAuth, profileRouter);
 app.use('/resumes', requireAuth, resumesRouter);
+app.use('/calibration', requireAuth, calibrationRouter);
 
 module.exports = app;
 
