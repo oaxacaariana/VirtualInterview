@@ -61,3 +61,59 @@ function calculateAverage(precisionPercentages) {
   precision = precision / 50;
   return precision;
 }
+
+function calculateAverageSpot(past50Array) {
+  var x50 = past50Array[0];
+  var y50 = past50Array[1];
+
+  var xTotal = 0;
+  var yTotal = 0;
+
+  for (x = 0; x < x50.length; x++) {
+    xTotal += x50[x];
+    yTotal += y50[x];
+  }
+
+  const xAvg = xTotal / x50.length;
+  const yAvg = yTotal / y50.length;
+
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  const xOffsetPercent = ((xAvg - centerX) / centerX) * 100;
+  const yOffsetPercent = ((yAvg - centerY) / centerY) * 100;
+  const { xDir, yDir } = getDirection(xOffsetPercent, yOffsetPercent);
+
+  
+  console.log("Average:", xAvg, yAvg);
+  console.log("Offset %:", xOffsetPercent.toFixed(2) + "%", yOffsetPercent.toFixed(2) + "%");
+  console.log(`Looking ${yDir}-${xDir}`);
+  moveEyeTrackingSpot(xOffsetPercent, yOffsetPercent);
+}
+
+function getDirection(xOffset, yOffset) {
+  let xDir = "center";
+  let yDir = "center";
+
+  if (xOffset > 2) xDir = "right";
+  else if (xOffset < -2) xDir = "left";
+
+  if (yOffset > 2) yDir = "down";
+  else if (yOffset < -2) yDir = "up";
+
+  return { xDir, yDir };
+}
+
+function moveEyeTrackingSpot(xOffsetPercent, yOffsetPercent) {
+  
+
+  const maxX = window.innerWidth / 2;
+  const maxY = window.innerHeight / 2;
+
+  // convert percent to pixels
+  const xMove = (xOffsetPercent / 100) * maxX;
+  const yMove = (yOffsetPercent / 100) * maxY;
+
+  // apply movement
+  eyeTrackingSpot.style.transform = `translate(calc(-50% + ${xMove}px), calc(-50% + ${yMove}px))`;
+}

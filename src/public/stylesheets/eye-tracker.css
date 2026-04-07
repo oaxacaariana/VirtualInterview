@@ -21,114 +21,65 @@
     object-fit: cover;
 }
 
-.calibrate-container {
+#eye-tracking-spot {
+    position: fixed;
+    opacity: 1;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    width: 15vw;
+    height: 25vh;
+    border: 5px, solid, red;
+}
+
+.swal-btn-confirm {
+    background: linear-gradient(135deg, #60a5fa, #2dd4bf);
+    color: #111;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.swal-btn-confirm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+}
+
+.swal-btn-cancel {
+    background: rgba(255, 255, 255, 0.04);
+    color: #dbeafe;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.10);
+    cursor: pointer;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.15s ease;
+}
+
+.swal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.26);
+}
+
+#plotting_canvas {
+    visibility: hidden;
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 9999;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease;
-}
-
-.calibrate-container.active {
-    opacity: 1;
-    visibility: visible;
-    background-color: rgba(148, 163, 184, 0.282);
-    border: 2px solid #4c5bff;
-    border-radius: 4px;
-    pointer-events: auto;
-}
-
-.calibrate-grid {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    justify-items: center;
-    align-items: center;
-}
-
-.calibrate-dot {
-    width: 24px;
-    height: 24px;
-    background-color: rgb(6, 220, 6);
-    border-radius: 50%;
-}
-
-body {
-    min-width:600px!important;
-}
-
-button {
-    border-radius: 4px;
-}
-/* Video Feed Styling */
-#overlay {
-/* Video Feed Styling:
- * Include the !important keyword to override default styles applied by JS.
- * webgazer.js sets defaults for: display, position, top, left, width, height
- */
-}
-#webgazerVideoContainer {
-    display: block !important; 
-    position: fixed !important;
-    top: 0px !important;
-    left: 0px !important;
-    width: 320px !important;
-    height: 240px !important;
     z-index: 1;
-}
-
-/* Navbar styling */
-#webgazerNavbar {
-    left: 320px;
-    width: calc(100% - 320px);
-    z-index: 0;
-    box-shadow: 0px 3px 5px #ddd;
-    border:0px;
-    background-color: #fff;
-}
-
-#Accuracy a{
-    background-color: #222;
-    color: #eee;
-    left: -15px;
-    padding-left: 80px;
-    padding-right: 40px;
-}
-#Accuracy {
-    background-color: #222;
-    padding-left: inherit;
-}
-
-li {
-    padding-left: 50px;
-}
-.navbar-right li {
-    padding-right: 20px;
-}
-
-.helpBtn {
-    display: inline-block;
-    padding: 15px;
-    border: none;
-    background: none;
-    color: #777;
-}
-.helpBtn:hover {
-    color: black!important;
-    text-decoration: none;
-}
-.modal-header {
-    border-bottom: none!important;
+    background: rgba(10, 13, 20, 0.98);
 }
 
 /* Calibration button styling */
-.Calibration{
+.Calibration {
     width: 20px;
     height: 20px;
     -webkit-border-radius: 25px;
@@ -138,44 +89,52 @@ li {
     opacity: 0.2;
     border-color: black;
     border-style: solid;
-    position:fixed;
+    position: fixed;
+    z-index: 2;
 }
 
 /* Calibration point position */
-#Pt1{
-    top: 70px;
-    left:340px;
+#Pt1 {
+    top: 2vh;
+    left: 2vw;
 }
-#Pt2{
-    top: 70px;
-    left:50vw;
-    margin-left: 340;
+
+#Pt2 {
+    top: 2vh;
+    left: 50vw;
 }
-#Pt3{
-    top: 70px;
-    right:2vw;
+
+#Pt3 {
+    top: 2vh;
+    right: 2vw;
 }
-#Pt4{
-    top:50vh;
-    left:2vw;
+
+#Pt4 {
+    top: 50vh;
+    left: 2vw;
 }
-#Pt5{
+
+#Pt5 {
     top: 50vh;
     left: 50vw;
 }
-#Pt6{
+
+#Pt6 {
     top: 50vh;
-    right:2vw;
+    right: 2vw;
 }
-#Pt7{
-    bottom:2vw;
+
+#Pt7 {
+    bottom: 2vh;
     left: 2vw;
 }
-#Pt8{
-    bottom:2vw;
-    left:50vw;
+
+#Pt8 {
+    bottom: 2vh;
+    left: 50vw;
 }
-#Pt9{
-    bottom:2vw;
-    right:2vw;
+
+#Pt9 {
+    bottom: 2vh;
+    right: 2vw;
 }
