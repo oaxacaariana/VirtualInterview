@@ -1,3 +1,8 @@
+/**
+ * Interview frontend state helpers.
+ * Inputs: Existing state objects and optional persisted state snapshots.
+ * Outputs: Fresh state objects and in-place state replacement for the interview UI.
+ */
 export const createEmptyContext = () => ({
   company: '',
   role: '',

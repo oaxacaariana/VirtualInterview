@@ -1,9 +1,345 @@
+/**
+ * Interview frontend entry module.
+ * Inputs: DOM nodes, browser events, persisted local state, and interview API responses.
+ * Outputs: A fully wired interview UI with chat flow, modal setup, persistence, and inactivity handling.
+ */
 import { startInterview, askInterview, closeInterview, getTurnReview } from './api.js';
 import { createChatView } from './chatView.js';
 import { createContextModal } from './contextModal.js';
 import { createInitialState, createEmptyContext, replaceState } from './state.js';
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
+import { createTTS } from './tts.js';
+
+const avatarContainer = document.getElementById('avatar-container');
+const cameraFeed = document.getElementById('camera-feed');
+const cameraPlaceholder = document.getElementById('camera-placeholder');
+const stageLiveBadge = document.getElementById('stage-live-badge');
+const subtitleEl = document.getElementById('iv-subtitle-text');
+const chatPanel = document.getElementById('iv-chat-panel');
+const coachPanel = document.getElementById('iv-coach-panel');
+const toggleChatBtn = document.getElementById('iv-toggle-chat');
+const toggleCoachBtn = document.getElementById('iv-toggle-coach');
+const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
+const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+const muteBtn = document.getElementById('iv-toggle-mute');
+
+const setAvatarTalking = (talking) => {
+  avatarContainer?.classList.toggle('is-talking', talking);
+};
+
+const tts = createTTS({
+  onStart: () => setAvatarTalking(true),
+  onEnd: () => setAvatarTalking(false),
+});
+
+const syncMuteBtn = () => {
+  if (!muteBtn) return;
+  const muted = tts.isMuted();
+  muteBtn.classList.toggle('is-active', !muted);
+  muteBtn.title = muted ? 'Unmute Aria' : 'Mute Aria';
+  const slash = muteBtn.querySelector('.mute-slash');
+  if (slash) {
+    slash.style.display = muted ? 'block' : 'none';
+  }
+};
+
+muteBtn?.addEventListener('click', () => {
+  tts.setMuted(!tts.isMuted());
+  syncMuteBtn();
+});
+
+syncMuteBtn();
+
+let subtitleTimer = null;
+
+const setSubtitle = (text) => {
+  if (!subtitleEl) return;
+  clearTimeout(subtitleTimer);
+  subtitleEl.classList.remove('is-visible');
+  if (!text) return;
+  void subtitleEl.offsetHeight;
+  subtitleEl.textContent = text;
+  subtitleEl.classList.add('is-visible');
+};
+
+const setSubtitleThinking = () => {
+  if (!subtitleEl) return;
+  subtitleEl.classList.remove('is-visible');
+  void subtitleEl.offsetHeight;
+  subtitleEl.innerHTML = '<span class="iv-subtitle-thinking"><span></span><span></span><span></span></span>';
+  subtitleEl.classList.add('is-visible');
+};
+
+const clearSubtitle = () => {
+  if (!subtitleEl) return;
+  subtitleEl.classList.remove('is-visible');
+  subtitleTimer = window.setTimeout(() => {
+    subtitleEl.textContent = '';
+  }, 400);
+};
+
+const openPanel = (panel, btn) => {
+  [chatPanel, coachPanel].forEach((candidate) => {
+    if (candidate && candidate !== panel) {
+      candidate.classList.remove('is-open');
+      candidate.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  [toggleChatBtn, toggleCoachBtn].forEach((candidate) => {
+    if (candidate && candidate !== btn) {
+      candidate.classList.remove('is-active');
+    }
+  });
+
+  if (!panel) return;
+  const isOpen = panel.classList.contains('is-open');
+  panel.classList.toggle('is-open', !isOpen);
+  panel.setAttribute('aria-hidden', String(isOpen));
+  btn?.classList.toggle('is-active', !isOpen);
+};
+
+toggleChatBtn?.addEventListener('click', () => openPanel(chatPanel, toggleChatBtn));
+toggleCoachBtn?.addEventListener('click', () => openPanel(coachPanel, toggleCoachBtn));
+
+document.getElementById('iv-chat-close')?.addEventListener('click', () => {
+  chatPanel?.classList.remove('is-open');
+  chatPanel?.setAttribute('aria-hidden', 'true');
+  toggleChatBtn?.classList.remove('is-active');
+});
+
+document.getElementById('iv-coach-close')?.addEventListener('click', () => {
+  coachPanel?.classList.remove('is-open');
+  coachPanel?.setAttribute('aria-hidden', 'true');
+  toggleCoachBtn?.classList.remove('is-active');
+});
+
+const promptForEyeTracking = async () => {
+  if (!window.webgazer) {
+    return false;
+  }
+
+  const cachedChoice = sessionStorage.getItem('iv-eye-tracking-choice');
+  if (cachedChoice) {
+    return cachedChoice === 'yes';
+  }
+
+  const savedChoice = localStorage.getItem('iv-eye-tracking');
+  if (savedChoice === 'yes' || savedChoice === 'on') {
+    sessionStorage.setItem('iv-eye-tracking-choice', 'yes');
+    return true;
+  }
+  if (savedChoice === 'no' || savedChoice === 'off') {
+    sessionStorage.setItem('iv-eye-tracking-choice', 'no');
+    return false;
+  }
+
+  if (window.Swal?.fire) {
+    const result = await window.Swal.fire({
+      title: 'Track Eye Movement',
+      text: 'Would you like to track eye movement during your interview to receive feedback on your eye contact?',
+      showCancelButton: true,
+      showConfirmButton: true,
+      cancelButtonText: 'No',
+      confirmButtonText: 'Yes',
+      background: 'linear-gradient(180deg, rgba(20,23,32,0.96), rgba(15,15,16,0.98))',
+      color: '#dbeafe',
+      titleColor: '#93c5fd',
+      customClass: {
+        confirmButton: 'swal-btn-confirm',
+        cancelButton: 'swal-btn-cancel',
+      },
+      buttonsStyling: false,
+    });
+
+    sessionStorage.setItem('iv-eye-tracking-choice', result.isConfirmed ? 'yes' : 'no');
+    return result.isConfirmed;
+  }
+
+  const accepted = window.confirm(
+    'Track eye movement during your interview to receive feedback on your eye contact?'
+  );
+  sessionStorage.setItem('iv-eye-tracking-choice', accepted ? 'yes' : 'no');
+  return accepted;
+};
+
+let cameraStream = null;
+let cameraEnabled = localStorage.getItem('iv-camera') !== 'off';
+let eyeTrackingEnabled = localStorage.getItem('iv-eye-tracking') !== 'off';
+let webgazerInitialized = false;
+let eyeContactTotal = 0;
+let eyeContactHits = 0;
+
+const setEyeTrackingState = (active, focused = null) => {
+  if (!eyeTrackingSpot) return;
+  eyeTrackingSpot.classList.toggle('is-active', active);
+  eyeTrackingSpot.classList.toggle('is-focused', focused === true);
+  eyeTrackingSpot.classList.toggle('is-missed', focused === false);
+};
+
+const isOverlap = (xPos, yPos) => {
+  const rect = eyeTrackingSpot?.getBoundingClientRect();
+  if (!rect) return false;
+  return xPos >= rect.left && xPos <= rect.right && yPos >= rect.top && yPos <= rect.bottom;
+};
+
+const updateEyeTrackingBadge = () => {
+  if (!stageLiveBadge) return;
+  if (!cameraStream) {
+    stageLiveBadge.removeAttribute('data-eye-score');
+    return;
+  }
+
+  if (!eyeTrackingEnabled || !eyeContactTotal) {
+    stageLiveBadge.removeAttribute('data-eye-score');
+    return;
+  }
+
+  stageLiveBadge.setAttribute('data-eye-score', `${Math.round((eyeContactHits / eyeContactTotal) * 100)}% eye`);
+};
+
+const pauseEyeTracking = () => {
+  setEyeTrackingState(false);
+  if (!window.webgazer || !webgazerInitialized) {
+    updateEyeTrackingBadge();
+    return;
+  }
+
+  try {
+    window.webgazer.pause();
+  } catch {
+    // no-op
+  }
+
+  updateEyeTrackingBadge();
+};
+
+const startEyeTracking = async () => {
+  if (!window.webgazer || !eyeTrackingEnabled) {
+    return;
+  }
+
+  try {
+    if (!webgazerInitialized) {
+      window.webgazer.params.faceMeshBasePath = '/mediapipe/face_mesh/';
+      await window.webgazer
+        .setRegression('ridge')
+        .setGazeListener((data) => {
+          if (!data || !cameraStream) return;
+
+          eyeContactTotal += 1;
+          const focused = isOverlap(data.x, data.y);
+          if (focused) {
+            eyeContactHits += 1;
+          }
+          setEyeTrackingState(true, focused);
+          updateEyeTrackingBadge();
+        })
+        .saveDataAcrossSessions(true)
+        .begin();
+
+      window.webgazer
+        .showVideoPreview(false)
+        .showPredictionPoints(false)
+        .applyKalmanFilter(true)
+        .showFaceOverlay(false)
+        .showFaceFeedbackBox(false);
+
+      webgazerInitialized = true;
+    } else {
+      await window.webgazer.resume();
+    }
+
+    setEyeTrackingState(true);
+  } catch (error) {
+    console.warn('Eye tracking failed to start:', error);
+    eyeTrackingEnabled = false;
+    localStorage.setItem('iv-eye-tracking', 'off');
+    setEyeTrackingState(false);
+    updateEyeTrackingBadge();
+  }
+};
+
+const setCameraUI = (on) => {
+  if (cameraFeed) cameraFeed.classList.toggle('hidden', !on);
+  if (cameraPlaceholder) cameraPlaceholder.classList.toggle('hidden', on);
+  if (stageLiveBadge) stageLiveBadge.style.display = on ? '' : 'none';
+  if (cameraToggleBtn) {
+    cameraToggleBtn.classList.toggle('is-active', on);
+    cameraToggleBtn.title = on ? 'Turn camera off' : 'Turn camera on';
+  }
+  if (!on) {
+    setEyeTrackingState(false);
+  }
+  updateEyeTrackingBadge();
+};
+
+const stopCamera = () => {
+  cameraStream?.getTracks().forEach((track) => track.stop());
+  cameraStream = null;
+  if (cameraFeed) {
+    cameraFeed.srcObject = null;
+  }
+  pauseEyeTracking();
+  setCameraUI(false);
+};
+
+const startCamera = async () => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setCameraUI(false);
+    return;
+  }
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    if (cameraFeed) {
+      cameraFeed.srcObject = cameraStream;
+    }
+    setCameraUI(true);
+
+    const shouldTrackEyes = await promptForEyeTracking();
+    eyeTrackingEnabled = shouldTrackEyes;
+    localStorage.setItem('iv-eye-tracking', shouldTrackEyes ? 'on' : 'off');
+
+    if (shouldTrackEyes) {
+      await startEyeTracking();
+    } else {
+      setEyeTrackingState(false);
+      updateEyeTrackingBadge();
+    }
+  } catch (error) {
+    console.warn('Camera failed to start:', error);
+    setCameraUI(false);
+  }
+};
+
+cameraToggleBtn?.addEventListener('click', async () => {
+  cameraEnabled = !cameraEnabled;
+  localStorage.setItem('iv-camera', cameraEnabled ? 'on' : 'off');
+  if (cameraEnabled) {
+    await startCamera();
+  } else {
+    stopCamera();
+  }
+});
+
+if (cameraEnabled) {
+  void startCamera();
+} else {
+  setCameraUI(false);
+}
+
+window.addEventListener('beforeunload', () => {
+  stopCamera();
+  if (window.webgazer && webgazerInitialized) {
+    try {
+      window.webgazer.end();
+    } catch {
+      // no-op
+    }
+  }
+});
 
 const elements = {
   chatLog: document.getElementById('chat-log'),
@@ -115,8 +451,14 @@ const addUserMessage = (content, turnNumber) => {
   return bubble;
 };
 
-const addAssistantMessage = (content) => {
+const addAssistantMessage = (content, options = {}) => {
   chatView.addMessage('assistant', content);
+  if (options.subtitle !== false) {
+    setSubtitle(content);
+  }
+  if (options.speak !== false) {
+    void tts.play(content);
+  }
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -149,10 +491,16 @@ const watchTurnAnalysis = async ({ chatId, turnNumber, answer, bubble }) => {
 
 const setThinking = (thinking) => {
   chatView.setStatus(thinking ? 'Thinking...' : 'Ready', thinking);
+  if (thinking) {
+    tts.stop();
+    setSubtitleThinking();
+  }
 };
 
 const resetChat = () => {
   clearInactivityTimer();
+  tts.stop();
+  clearSubtitle();
   chatView.clearMessages();
   replaceState(state, createInitialState());
   state.context = createEmptyContext();
@@ -184,8 +532,15 @@ const hydrate = () => {
       addUserMessage(message.content, turnNumber);
       return;
     }
-    addAssistantMessage(message.content);
+
+    addAssistantMessage(message.content, { speak: false, subtitle: false });
   });
+
+  const latestAssistantMessage = [...state.history].reverse().find((message) => message.role === 'assistant');
+  if (latestAssistantMessage) {
+    setSubtitle(latestAssistantMessage.content);
+  }
+
   contextModal.populate(state.context);
   contextModal.setMode('view');
   chatView.setInterviewComplete(state.interviewComplete);
@@ -233,11 +588,14 @@ const expireInterviewForInactivity = async () => {
     clearInactivityTimer();
     return;
   }
-  await completeInterview('Interview closed after 30 minutes of inactivity. Start a new session when you are ready to continue practicing.');
+  await completeInterview(
+    'Interview closed after 30 minutes of inactivity. Start a new session when you are ready to continue practicing.'
+  );
 };
 
 elements.form.addEventListener('submit', async (event) => {
   event.preventDefault();
+  tts.warmUp();
   const prompt = (elements.promptInput.value || '').trim();
   if (!prompt) {
     return;
@@ -259,6 +617,7 @@ elements.form.addEventListener('submit', async (event) => {
   state.history.push({ role: 'user', content: prompt });
   markActivity();
   elements.promptInput.value = '';
+  clearSubtitle();
   setThinking(true);
 
   try {
@@ -308,6 +667,7 @@ elements.form.addEventListener('submit', async (event) => {
 
 contextModal.contextForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  tts.warmUp();
 
   state.context = contextModal.read();
   state.contextSet = !!(state.context.company && state.context.role && state.context.resumeId);

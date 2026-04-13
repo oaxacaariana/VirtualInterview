@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Users | Virtual Interview</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/styles/app.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="form-section admin-page">
+        <div class="section-shell admin-shell">
+            <div class="glass admin-page__header">
+                <div>
+                    <p class="eyebrow">Admin panel</p>
+                    <h1>User management</h1>
+                    <p class="form-subtext">Review accounts, check role assignments, and open a detail page to edit a user.</p>
+                </div>
+                <form method="GET" action="/admin/users" class="admin-search">
+                    <input type="text" name="q" value="<%= search || '' %>" placeholder="Search by username, name, or role">
+                    <button type="submit" class="btn-outline">Search</button>
+                </form>
+            </div>
+
+            <% if (error) { %><p class="admin-message admin-message--error"><%= error %></p><% } %>
+            <% if (success) { %><p class="admin-message admin-message--success"><%= success %></p><% } %>
+
+            <div class="admin-user-grid">
+                <% if (!users.length) { %>
+                    <div class="glass admin-user-card">
+                        <h3>No users found</h3>
+                        <p class="muted">Try a different search or create a new account.</p>
+                    </div>
+                <% } %>
+
+                <% users.forEach((user) => { %>
+                    <article class="glass admin-user-card">
+                        <div class="admin-user-card__top">
+                            <div>
+                                <p class="eyebrow"><%= user.role === 'admin' ? 'Admin' : 'Candidate' %></p>
+                                <h3><%= user.name || user.username %></h3>
+                                <p class="muted">@<%= user.username %></p>
+                            </div>
+                            <span class="status-dot <%= user.role === 'admin' ? 'active' : '' %>"><%= user.role %></span>
+                        </div>
+
+                        <dl class="admin-stat-grid">
+                            <div><dt>Resumes</dt><dd><%= user.stats.resumeCount %></dd></div>
+                            <div><dt>Resume Scores</dt><dd><%= user.stats.resumeScoreCount %></dd></div>
+                            <div><dt>Chats</dt><dd><%= user.stats.chatCount %></dd></div>
+                            <div><dt>Interview Scores</dt><dd><%= user.stats.interviewScoreCount %></dd></div>
+                        </dl>
+
+                        <p class="muted">Created <%= user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown' %></p>
+                        <a href="/admin/users/<%= user._id %>" class="btn-primary">Manage account</a>
+                    </article>
+                <% }) %>
+            </div>
+        </div>
+    </section>
+
+    <%- include('partials/footer'); %>
+</body>
+</html>

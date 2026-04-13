@@ -1,3 +1,8 @@
+/**
+ * Interview chat view module.
+ * Inputs: DOM element references plus interview messages, review payloads, and UI state changes.
+ * Outputs: DOM updates for chat bubbles, coach analysis panels, and final review rendering.
+ */
 const escapeHtml = (value) =>
   String(value)
     .replaceAll('&', '&amp;')

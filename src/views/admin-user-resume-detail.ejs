@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Resume Score | Virtual Interview</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/styles/app.css">
+</head>
+<body>
+
+<%- include('partials/navbar'); %>
+
+<section class="results-section">
+    <%
+      const b = scoreBreakdown || {};
+      const percent = (val, max) => {
+        if (typeof val === 'number' && max > 0) {
+          return Math.max(0, Math.min(100, Math.round((val / max) * 100)));
+        }
+        return 0;
+      };
+      const bars = [
+        { label: 'Role fit', val: b.role_fit, max: 25 },
+        { label: 'Experience depth', val: b.experience_depth, max: 20 },
+        { label: 'Quantified impact', val: b.quantified_impact, max: 15 },
+        { label: 'Skills evidence', val: b.skills_evidence_alignment, max: 10 },
+        { label: 'Resume completeness', val: b.resume_completeness, max: 10 },
+        { label: 'Structure & clarity', val: b.professional_structure_clarity, max: 10 },
+        { label: 'Project quality', val: b.project_quality, max: 5 },
+        { label: 'Education / certs', val: b.education_certifications, max: 5 },
+      ];
+      const tier = typeof fitScore === 'number'
+        ? (fitScore >= 85 ? 'Excellent match' : fitScore >= 70 ? 'Strong match' : fitScore >= 50 ? 'Partial match' : 'Needs alignment')
+        : 'Pending';
+    %>
+
+    <div class="results-hero">
+        <div>
+            <p class="eyebrow">Admin resume score view</p>
+            <p class="muted">Viewing saved scoring data for <%= targetUser.name || targetUser.username %> (@<%= targetUser.username %>).</p>
+            <div class="pill-row">
+                <span class="pill">Resume: <%= resumeName %></span>
+                <% if (company) { %><span class="pill">Company: <%= company %></span><% } %>
+                <% if (jobSnippet) { %><span class="pill">Job: <%= jobSnippet.slice(0,120) %><%= jobSnippet.length > 120 ? '...' : '' %></span><% } %>
+            </div>
+        </div>
+        <div class="hero-badge"><%= tier %></div>
+    </div>
+
+    <div class="score-grid">
+        <div class="score-card glass primary-score">
+            <div class="score-ring results-ring" style="--score:<%= typeof fitScore === 'number' ? (fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= ringColor %>; width:170px; height:170px;">
+                <div class="score-ring__fill"></div>
+                <div class="score-ring__center" style="font-size:1.5rem;"><%= typeof fitScore === 'number' ? fitScore : '-' %></div>
+            </div>
+            <div class="score-meta">
+                <div class="score-title"><%= scoreTitle || 'Resume Strength & Role Fit' %></div>
+                <div class="score-tier"><%= tier %></div>
+                <p class="muted">Total of all eight components, balancing role fit with resume quality.</p>
+            </div>
+        </div>
+
+        <div class="score-card glass breakdown-card">
+            <h3>Component Breakdown</h3>
+            <% if (scoreBreakdown) { %>
+                <% bars.forEach(row => { %>
+                    <div class="bar-row">
+                        <div class="bar-label">
+                            <span><%= row.label %></span>
+                            <span class="bar-value"><%= row.val ?? '-' %>/<%= row.max %></span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="--fill:<%= percent(row.val, row.max) %>% ; --bar-color:<%= ringColor %>"></div>
+                        </div>
+                    </div>
+                <% }) %>
+                <div class="bar-row total-row">
+                    <div class="bar-label">
+                        <span>Overall Score</span>
+                        <span class="bar-value"><%= typeof fitScore === 'number' ? fitScore : '-' %>/100</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="--fill:<%= typeof fitScore === 'number' ? fitScore : 0 %>% ; --bar-color:<%= ringColor %>"></div>
+                    </div>
+                </div>
+            <% } else { %>
+                <p class="muted">Score breakdown unavailable.</p>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="feedback-grid">
+        <div class="feedback-card">
+            <h3>Strengths</h3>
+            <% if (positives && positives.length) { %>
+                <ul>
+                    <% positives.forEach(item => { %>
+                        <li><%= item %></li>
+                    <% }) %>
+                </ul>
+            <% } else { %>
+                <p class="muted">No positive signals captured yet.</p>
+            <% } %>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Risks / Gaps</h3>
+            <% if (negatives && negatives.length) { %>
+                <ul>
+                    <% negatives.forEach(item => { %>
+                        <li><%= item %></li>
+                    <% }) %>
+                </ul>
+            <% } else { %>
+                <p class="muted">No risks identified.</p>
+            <% } %>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Summary</h3>
+            <p><%= summary || 'LLM summary unavailable.' %></p>
+        </div>
+
+        <div class="feedback-card">
+            <h3>Job & Resume</h3>
+            <p><strong>Job description:</strong> <%= jobSnippet || 'Not provided' %></p>
+            <p><strong>Resume:</strong> <%= resumeName %> (<%= resumeSizeKb ? resumeSizeKb + ' KB' : 'size n/a' %>)</p>
+            <% if (resumeId) { %>
+                <p><strong>Resume ID:</strong> <%= resumeId %></p>
+                <div style="margin-top:10px;">
+                    <a class="btn-outline" href="/admin/users/<%= targetUser._id %>/resumes/<%= resumeId %>/preview" target="_blank">View Resume</a>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="center">
+        <a href="/admin/users/<%= targetUser._id %>/resumes" class="btn-primary">Back to user's resumes</a>
+    </div>
+</section>
+
+<%- include('partials/footer'); %>
+
+</body>
+</html>

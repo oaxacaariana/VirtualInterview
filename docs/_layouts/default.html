@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{{ site.description }}">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <div class="site-brand">
+            <p class="eyebrow">Documentation</p>
+            <a class="site-title" href="{{ '/index.html' | relative_url }}">{{ site.title }}</a>
+            <p class="site-tagline">{{ site.description }}</p>
+          </div>
+          <a class="home-button" href="{{ '/index.html' | relative_url }}" aria-label="Docs home">
+            <span class="home-button__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-5.5h-5V21H5a1 1 0 0 1-1-1z"/>
+              </svg>
+            </span>
+            <span>Home</span>
+          </a>
+        </div>
+      </header>
+
+      <main class="page-shell">
+        <aside class="docs-sidebar">
+          <div class="glass docs-sidebar__card">
+            <p class="eyebrow">Browse</p>
+            <a href="{{ '/overview.html' | relative_url }}">Project Overview</a>
+            <a href="{{ '/architecture.html' | relative_url }}">Architecture</a>
+            <a href="{{ '/setup.html' | relative_url }}">Setup</a>
+            <a href="{{ '/environment.html' | relative_url }}">Environment</a>
+            <a href="{{ '/deployment.html' | relative_url }}">Deployment</a>
+            <a href="{{ '/routes.html' | relative_url }}">Routes and Flows</a>
+            <a href="{{ '/data-model.html' | relative_url }}">Data Model</a>
+            <a href="{{ '/development.html' | relative_url }}">Development Notes</a>
+          </div>
+        </aside>
+
+        <section class="docs-content">
+          <article class="glass docs-article">
+            {{ content }}
+          </article>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="glass site-footer__inner">
+          <p class="site-footer__copy">Virtual Interview project documentation</p>
+          <a class="repo-link" href="https://github.com/Pr0fessionalBum/InterviewTestingRepo" target="_blank" rel="noopener noreferrer">
+            Repository
+          </a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

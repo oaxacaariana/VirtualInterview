@@ -1,3 +1,8 @@
+/**
+ * Interview local storage helpers.
+ * Inputs: Frontend interview state objects and the browser's localStorage.
+ * Outputs: Saved, loaded, and cleared persisted interview UI state.
+ */
 const STATE_KEY = 'vi_mock_chat_state';
 
 export const saveState = (state) => {
