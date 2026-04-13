@@ -4,6 +4,149 @@ import { createContextModal } from './contextModal.js';
 import { createInitialState, createEmptyContext, replaceState } from './state.js';
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
+import { createTTS } from './tts.js';
+
+// ── Avatar, camera, subtitles & panels ──────────────────────
+const avatarContainer = document.getElementById('avatar-container');
+const cameraFeed = document.getElementById('camera-feed');
+const cameraPlaceholder = document.getElementById('camera-placeholder');
+const stageLiveBadge = document.getElementById('stage-live-badge');
+const subtitleEl = document.getElementById('iv-subtitle-text');
+const chatPanel = document.getElementById('iv-chat-panel');
+const coachPanel = document.getElementById('iv-coach-panel');
+const toggleChatBtn = document.getElementById('iv-toggle-chat');
+const toggleCoachBtn = document.getElementById('iv-toggle-coach');
+
+// Avatar talking state — driven by audio playback, not HTTP lifecycle
+const setAvatarTalking = (talking) => {
+  avatarContainer?.classList.toggle('is-talking', talking);
+};
+
+// TTS
+const tts = createTTS({
+  onStart: () => setAvatarTalking(true),
+  onEnd:   () => setAvatarTalking(false),
+});
+
+// Mute toggle button
+const muteBtn = document.getElementById('iv-toggle-mute');
+const syncMuteBtn = () => {
+  if (!muteBtn) return;
+  const muted = tts.isMuted();
+  muteBtn.classList.toggle('is-active', !muted);
+  muteBtn.title = muted ? 'Unmute Aria' : 'Mute Aria';
+  const slash = muteBtn.querySelector('.mute-slash');
+  if (slash) slash.style.display = muted ? 'block' : 'none';
+};
+
+muteBtn?.addEventListener('click', () => {
+  tts.setMuted(!tts.isMuted());
+  syncMuteBtn();
+});
+
+syncMuteBtn();
+
+// SubtitleS
+let subtitleTimer = null;
+const setSubtitle = (text) => {
+  if (!subtitleEl) return;
+  clearTimeout(subtitleTimer);
+  subtitleEl.classList.remove('is-visible');
+  if (!text) return;
+  void subtitleEl.offsetHeight; // restart transition
+  subtitleEl.textContent = text;
+  subtitleEl.classList.add('is-visible');
+};
+
+const setSubtitleThinking = () => {
+  if (!subtitleEl) return;
+  subtitleEl.classList.remove('is-visible');
+  void subtitleEl.offsetHeight;
+  subtitleEl.innerHTML = '<span class="iv-subtitle-thinking"><span></span><span></span><span></span></span>';
+  subtitleEl.classList.add('is-visible');
+};
+
+const clearSubtitle = () => {
+  if (!subtitleEl) return;
+  subtitleEl.classList.remove('is-visible');
+  subtitleTimer = setTimeout(() => { subtitleEl.textContent = ''; }, 400);
+};
+
+// Panel toggles
+const openPanel = (panel, btn) => {
+  [chatPanel, coachPanel].forEach((p) => {
+    if (p && p !== panel) {
+      p.classList.remove('is-open');
+      p.setAttribute('aria-hidden', 'true');
+    }
+  });
+  [toggleChatBtn, toggleCoachBtn].forEach((b) => {
+    if (b && b !== btn) b.classList.remove('is-active');
+  });
+  if (!panel) return;
+  const isOpen = panel.classList.contains('is-open');
+  panel.classList.toggle('is-open', !isOpen);
+  panel.setAttribute('aria-hidden', String(isOpen));
+  btn?.classList.toggle('is-active', !isOpen);
+};
+
+toggleChatBtn?.addEventListener('click', () => openPanel(chatPanel, toggleChatBtn));
+toggleCoachBtn?.addEventListener('click', () => openPanel(coachPanel, toggleCoachBtn));
+
+document.getElementById('iv-chat-close')?.addEventListener('click', () => {
+  chatPanel?.classList.remove('is-open');
+  chatPanel?.setAttribute('aria-hidden', 'true');
+  toggleChatBtn?.classList.remove('is-active');
+});
+
+document.getElementById('iv-coach-close')?.addEventListener('click', () => {
+  coachPanel?.classList.remove('is-open');
+  coachPanel?.setAttribute('aria-hidden', 'true');
+  toggleCoachBtn?.classList.remove('is-active');
+});
+
+// Added a camera toggle option
+let cameraStream = null;
+let cameraEnabled = localStorage.getItem('iv-camera') !== 'off';
+const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+
+const setCameraUI = (on) => {
+  if (cameraFeed) cameraFeed.classList.toggle('hidden', !on);
+  if (cameraPlaceholder) cameraPlaceholder.classList.toggle('hidden', on);
+  if (stageLiveBadge) stageLiveBadge.style.display = on ? '' : 'none';
+  if (cameraToggleBtn) {
+    cameraToggleBtn.classList.toggle('is-active', on);
+    cameraToggleBtn.title = on ? 'Turn camera off' : 'Turn camera on';
+    const icon = cameraToggleBtn.querySelector('.cam-btn-icon');
+    if (icon) icon.setAttribute('data-off', on ? '' : 'true');
+  }
+};
+
+const stopCamera = () => {
+  cameraStream?.getTracks().forEach((t) => t.stop());
+  cameraStream = null;
+  if (cameraFeed) cameraFeed.srcObject = null;
+  setCameraUI(false);
+};
+
+const startCamera = async () => {
+  if (!navigator.mediaDevices?.getUserMedia) { setCameraUI(false); return; }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    if (cameraFeed) cameraFeed.srcObject = cameraStream;
+    setCameraUI(true);
+  } catch {
+    setCameraUI(false);
+  }
+};
+
+cameraToggleBtn?.addEventListener('click', async () => {
+  cameraEnabled = !cameraEnabled;
+  localStorage.setItem('iv-camera', cameraEnabled ? 'on' : 'off');
+  if (cameraEnabled) { await startCamera(); } else { stopCamera(); }
+});
+
+if (cameraEnabled) { startCamera(); } else { setCameraUI(false); }
 
 const elements = {
   chatLog: document.getElementById('chat-log'),
@@ -118,6 +261,8 @@ const addUserMessage = (content, turnNumber) => {
 
 const addAssistantMessage = (content) => {
   chatView.addMessage('assistant', content);
+  setSubtitle(content);
+  void tts.play(content);
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -150,6 +295,10 @@ const watchTurnAnalysis = async ({ chatId, turnNumber, answer, bubble }) => {
 
 const setThinking = (thinking) => {
   chatView.setStatus(thinking ? 'Thinking...' : 'Ready', thinking);
+  if (thinking) {
+    tts.stop(); // cancel any prior audio so mouth stops before new response
+    setSubtitleThinking();
+  }
 };
 
 const resetChat = () => {
@@ -239,6 +388,7 @@ const expireInterviewForInactivity = async () => {
 
 elements.form.addEventListener('submit', async (event) => {
   event.preventDefault();
+  tts.warmUp(); // unlock AudioContext while we're still inside the user gesture
   const prompt = (elements.promptInput.value || '').trim();
   if (!prompt) {
     return;
@@ -260,6 +410,7 @@ elements.form.addEventListener('submit', async (event) => {
   state.history.push({ role: 'user', content: prompt });
   markActivity();
   elements.promptInput.value = '';
+  clearSubtitle();
   setThinking(true);
 
   try {
@@ -309,6 +460,7 @@ elements.form.addEventListener('submit', async (event) => {
 
 contextModal.contextForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  tts.warmUp(); // unlock AudioContext on the opening user gesture
 
   state.context = contextModal.read();
   state.contextSet = !!(state.context.company && state.context.role && state.context.resumeId);

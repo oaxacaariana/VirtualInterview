@@ -9,6 +9,7 @@ const {
   showChatLogsPage,
   showChatLogDetail,
   listTranscripts,
+  textToSpeech,
 } = require('../controllers/openaiController');
 
 router.get('/', showOpenAIPage);
@@ -19,5 +20,6 @@ router.get('/review', getReview);
 router.post('/ask', askOpenAI);
 router.post('/start', startInterview);
 router.post('/close', closeChat);
+router.post('/tts', textToSpeech);
 
 module.exports = router;

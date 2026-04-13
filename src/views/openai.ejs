@@ -14,106 +14,258 @@
     <canvas id="plotting_canvas" width="500" height="500"></canvas>
     <div id="eye-tracking-spot"></div>
     <%- include('partials/navbar'); %>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-        <script src="/scripts/eye-tracking/main-calibration.js"></script>
-        <script src="/scripts/eye-tracking/precision_calculation.js"></script>
-        <script src="/scripts/eye-tracking/precision_store_points.js"></script>
+    <div class="iv-shell">
+        <div class="iv-stage">
 
-        
+            <!-- Aria SVG - basically movable shapes with pure css with animations in openai.css-->
+            <div class="iv-aria-bg" id="avatar-container">
+                <svg class="avatar-svg" viewBox="0 0 320 300" preserveAspectRatio="xMidYTop meet" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <radialGradient id="av-bg-glow" cx="50%" cy="45%" r="60%">
+                            <stop offset="0%" stop-color="#1a3060" stop-opacity="0.6"/>
+                            <stop offset="100%" stop-color="#040810" stop-opacity="0"/>
+                        </radialGradient>
+                        <radialGradient id="av-suit-grad" cx="50%" cy="0%" r="100%">
+                            <stop offset="0%" stop-color="#0d1830"/>
+                            <stop offset="100%" stop-color="#060c1a"/>
+                        </radialGradient>
+                        <radialGradient id="av-head-grad" cx="38%" cy="35%" r="65%">
+                            <stop offset="0%" stop-color="#18263e"/>
+                            <stop offset="100%" stop-color="#0c1526"/>
+                        </radialGradient>
+                        <!-- makes the eyes glow blue idk i thought it was cool-->
+                        <filter id="av-eye-glow" x="-60%" y="-60%" width="220%" height="220%">
+                            <feGaussianBlur stdDeviation="2" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                        <filter id="av-head-glow" x="-15%" y="-10%" width="130%" height="130%">
+                            <feGaussianBlur stdDeviation="5" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                        <filter id="av-ambient" x="-30%" y="-20%" width="160%" height="160%">
+                            <feGaussianBlur stdDeviation="18" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
 
-        <div id="calibrationDiv">
-            <input type="button" class="Calibration" id="Pt1">
-            <input type="button" class="Calibration" id="Pt2">
-            <input type="button" class="Calibration" id="Pt3">
-            <input type="button" class="Calibration" id="Pt4">
-            <input type="button" class="Calibration" id="Pt5">
-            <input type="button" class="Calibration" id="Pt6">
-            <input type="button" class="Calibration" id="Pt7">
-            <input type="button" class="Calibration" id="Pt8">
-            <input type="button" class="Calibration" id="Pt9">
-        </div>
+                    <!-- Room background -->
+                    <rect width="320" height="300" fill="#060c18"/>
+                    <!-- Ambient glow behind figure -->
+                    <ellipse cx="160" cy="130" rx="110" ry="120" fill="url(#av-bg-glow)"/>
+                    <!-- Shoulder ambient fill -->
+                    <ellipse cx="160" cy="210" rx="60" ry="30" fill="#0d1e40" filter="url(#av-ambient)" opacity="0.5"/>
 
-        <section class="ai-shell">
-            <div class="chat-window">
-                <div class="chat-header">
-                    <div>
-                        <p class="eyebrow">Simulated interview</p>
-                        <h1>AI-Powered Mock Interviewer</h1>
-                        <p class="muted">Focused back-and-forth with a hiring manager persona.</p>
-                    </div>
-                    <div class="chat-header__actions">
-                        <button type="button" id="setup-btn" class="btn-outline">View setup</button>
-                        <a href="/openai/logs" class="btn-outline">Chat logs</a>
-                        <button type="button" id="context-btn" class="btn-primary">New chat</button>
-                        <button type="button" id="camera-btn" class="btn-primary">Toggle Camera</button>
-                        <button type="button" id="recalibrate-btn" onclick="Restart()" class="btn-primary" style="visibility: hidden;">Recalibrate</button>
-                        <span id="ai-status" class="status-dot">Ready</span>
-                    </div>
+                    <!-- Torso / suit -->
+                    <path d="M0 300 C0 252 55 228 114 218 L160 232 L206 218 C265 228 320 252 320 300 Z" fill="#060c18"/>
+                    <path d="M68 300 C70 265 92 244 116 236 L150 252 L160 232 L170 252 L204 236 C228 244 250 265 252 300 Z" fill="url(#av-suit-grad)" stroke="#1e3a6e" stroke-width="0.8" stroke-opacity="0.5"/>
+                    <!-- the folded things on the suit -->
+                    <path d="M150 252 L128 292 L160 272 Z" fill="#0a1428" stroke="#1e3a6e" stroke-width="0.6" stroke-opacity="0.6"/>
+                    <path d="M170 252 L192 292 L160 272 Z" fill="#0a1428" stroke="#1e3a6e" stroke-width="0.6" stroke-opacity="0.6"/>
+                    <!-- Shirt collar -->
+                    <path d="M148 236 L141 258 L160 248 L179 258 L172 236" fill="#0e1e38" stroke="#2a4a8a" stroke-width="0.8" stroke-opacity="0.7"/>
+                    <!-- Tie -->
+                    <path d="M155 248 L151 278 L160 286 L169 278 L165 248 Z" fill="#0f2060" stroke="#2358f5" stroke-width="0.8" stroke-opacity="0.7"/>
+                    <path d="M155 248 L160 256 L165 248 Z" fill="#1a3080"/>
+                    <!-- edge -->
+                    <rect x="0" y="290" width="320" height="10" fill="#07101e"/>
+                    <line x1="0" y1="290" x2="320" y2="290" stroke="#1a2a4a" stroke-width="0.8" opacity="0.6"/>
+
+                    <!-- Neck -->
+                    <rect x="148" y="218" width="24" height="20" rx="8" fill="#0f1a2e"/>
+
+                    <!-- Head -->
+                    <ellipse cx="160" cy="158" rx="58" ry="64" fill="url(#av-head-grad)" stroke="#2358f5" stroke-width="1" stroke-opacity="0.35" filter="url(#av-head-glow)"/>
+
+                    <!-- Hair -->
+                    <path d="M104 148 C106 106 128 84 160 82 C192 84 214 106 216 148 L214 130 C212 92 190 72 160 70 C130 72 108 92 106 130 Z" fill="#060c1c"/>
+                    <path d="M104 145 C102 158 102 172 106 184 L108 149 Z" fill="#060c1c"/>
+                    <path d="M216 145 C218 158 218 172 214 184 L212 149 Z" fill="#060c1c"/>
+
+                    <!-- Ears -->
+                    <ellipse cx="104" cy="165" rx="7" ry="11" fill="#0f1a2e" stroke="#1e3a6e" stroke-width="0.7" stroke-opacity="0.5"/>
+                    <ellipse cx="216" cy="165" rx="7" ry="11" fill="#0f1a2e" stroke="#1e3a6e" stroke-width="0.7" stroke-opacity="0.5"/>
+
+                    <!-- Eyebrows -->
+                    <path d="M126 136 Q136 131 146 134" stroke="#3a5a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                    <path d="M174 134 Q184 131 194 136" stroke="#3a5a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+                    <!-- Left eye -->
+                    <ellipse cx="136" cy="155" rx="11" ry="12" fill="#080e1e"/>
+                    <ellipse class="av-iris" cx="136" cy="155" rx="8" ry="8.5" fill="#2358f5" opacity="0.9" filter="url(#av-eye-glow)"/>
+                    <ellipse cx="136" cy="155" rx="5" ry="5.5" fill="#04080e"/>
+                    <ellipse cx="133" cy="152" rx="2.5" ry="2" fill="rgba(255,255,255,0.75)"/>
+                    <ellipse class="av-eyelid" cx="136" cy="155" rx="11" ry="12" fill="#0f1a2e"/>
+
+                    <!-- Right eye -->
+                    <ellipse cx="184" cy="155" rx="11" ry="12" fill="#080e1e"/>
+                    <ellipse class="av-iris" cx="184" cy="155" rx="8" ry="8.5" fill="#2358f5" opacity="0.9" filter="url(#av-eye-glow)"/>
+                    <ellipse cx="184" cy="155" rx="5" ry="5.5" fill="#04080e"/>
+                    <ellipse cx="181" cy="152" rx="2.5" ry="2" fill="rgba(255,255,255,0.75)"/>
+                    <ellipse class="av-eyelid" cx="184" cy="155" rx="11" ry="12" fill="#0f1a2e"/>
+
+                    <!-- Nose -->
+                    <path d="M156 162 L152 181 Q160 186 168 181 L164 162" stroke="#2a4a7a" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+                    <!-- Mouth rest -->
+                    <path class="av-mouth-rest" d="M146 198 Q160 207 174 198" stroke="#4a7aaa" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <!-- Mouth talking -->
+                    <path class="av-mouth-talk" d="M146 198 Q160 211 174 198 Q160 205 146 198 Z" stroke="#4a7aaa" stroke-width="1.5" fill="#080e1e" stroke-linecap="round" opacity="0"/>
+                </svg>
+
+                <!-- name tag idk i choose aria but we can change this-->
+                <div class="iv-aria-nametag">
+                    <span class="iv-aria-name">Aria</span>
+                    <span class="stage-badge">Hiring Manager</span>
                 </div>
 
-                <div class="camera-container">
-                    <video id="video-feed" autoplay></video>
-                </div>
-
-
-                <div id="chat-log" class="chat-log"></div>
-
-                <form id="ai-form" class="chat-input">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                        <label for="prompt">Your turn</label>
-                        <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End
-                            interview</button>
-                    </div>
-                    <textarea id="prompt" name="prompt" rows="5" maxlength="4000"
-                        placeholder="Type your answer or ask for clarification..."></textarea>
-                    <div class="chat-actions">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button type="button" id="mic-btn" class="btn-primary outline">Voice</button>
-                            <span id="mic-status" class="muted" style="font-size:0.9rem;"></span>
-                        </div>
-                        <button type="submit" id="send-btn" class="btn-primary">Send</button>
-                    </div>
-                </form>
+                <div class="av-talk-ring"></div>
             </div>
 
-            <aside class="feedback-panel review-rail">
-                <div class="review-block review-block-inline">
-                    <div class="review-block__head">
-                        <div>
-                            <p class="eyebrow">Response coach</p>
-                            <h3>Inline read</h3>
-                        </div>
-                        <div class="review-block__actions">
-                            <button type="button" id="analysis-privacy-btn" class="pill-btn">Blur coach</button>
-                            <span class="review-badge">Live</span>
-                        </div>
-                    </div>
-                    <div id="analysis-panel" class="analysis-panel"></div>
+            <!-- User camera in the bottom right -->
+            <div class="iv-pip">
+                <video id="camera-feed" autoplay playsinline muted></video>
+                <div id="camera-placeholder" class="camera-placeholder hidden">
+                    <svg viewBox="0 0 64 64" width="36" height="36">
+                        <circle cx="32" cy="26" r="11" fill="none" stroke="#3a5a7a" stroke-width="2"/>
+                        <path d="M12 56 C12 40 20 34 32 32 C44 34 52 40 52 56" fill="none" stroke="#3a5a7a" stroke-width="2"/>
+                    </svg>
+                    <p style="font-size:0.75rem; color:#4a6a8a; margin-top:4px;">Camera off</p>
                 </div>
+                <div class="cam-corners">
+                    <span class="cc cc-tl"></span>
+                    <span class="cc cc-tr"></span>
+                    <span class="cc cc-bl"></span>
+                    <span class="cc cc-br"></span>
+                </div>
+                <div class="iv-pip-label">
+                    <span class="iv-pip-name">You</span>
+                    <!-- the live button.. i need to make this toggle-->
+                    <span class="stage-live" id="stage-live-badge"></span>
+                </div>
+            </div>
 
-                <div class="review-block review-block-final">
-                    <div class="review-block__head">
-                        <div>
-                            <p class="eyebrow">Interview score</p>
-                            <h3>Final breakdown</h3>
-                        </div>
-                        <span class="review-badge review-badge-score">Final</span>
+            <!-- Top toolbar overlay -->
+            <div class="iv-topbar">
+                <div class="iv-topbar-left">
+                    <span id="ai-status" class="status-dot">Ready</span> <!-- shows ready or thinking based on the AI status-->
+                </div>
+                <div class="iv-topbar-center">
+                    <p class="eyebrow" style="color:#4a7aaa; font-size:0.7rem; letter-spacing:0.1em; margin:0 0 1px;">Simulated interview</p>
+                    <span style="font-weight:600; color:#dbeafe; font-size:0.88rem;">AI-Powered Mock Interviewer</span>
+                </div>
+                <!-- Setup opens the setup modal, Logs goes to your history, New chat resets -->-->
+                <div class="iv-topbar-right">
+                    <button type="button" id="setup-btn" class="iv-toolbar-btn">Setup</button>
+                    <a href="/openai/logs" class="iv-toolbar-btn">Logs</a>
+                    <button type="button" id="context-btn" class="iv-toolbar-btn iv-toolbar-btn-primary">New chat</button>
+                </div>
+            </div>
+
+            <!-- AIs messages-->
+            <div class="iv-subtitles-bar">
+                <p id="iv-subtitle-text" class="iv-subtitle-text"></p>
+            </div>
+
+            <!-- Chat transcript -->
+            <aside class="iv-side-panel" id="iv-chat-panel" aria-hidden="true">
+                <div class="iv-panel-head">
+                    <div>
+                        <p class="eyebrow" style="margin-bottom:2px;">Transcript</p>
+                        <h3 style="margin:0; font-size:1.05rem;">Chat history</h3>
                     </div>
-                    <div id="final-score-panel" class="final-score-panel"></div>
+                    <button class="iv-panel-close" id="iv-chat-close" aria-label="Close">✕</button>
+                </div>
+                <div id="chat-log" class="chat-log" style="min-height:120px; flex:1; overflow-y:auto; max-height:none;"></div>
+            </aside>
+
+            <!-- Coach -->
+            <aside class="iv-side-panel iv-coach-side" id="iv-coach-panel" aria-hidden="true">
+                <div class="iv-panel-head">
+                    <div>
+                        <p class="eyebrow" style="margin-bottom:2px;">Response coach</p>
+                        <h3 style="margin:0; font-size:1.05rem;">Live read</h3>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button type="button" id="analysis-privacy-btn" class="pill-btn" style="font-size:0.75rem; padding:4px 10px;">Blur coach</button>
+                        <span class="review-badge">Live</span>
+                        <button class="iv-panel-close" id="iv-coach-close" aria-label="Close">✕</button>
+                    </div>
+                </div>
+                <div class="iv-panel-scroll">
+                    <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
+                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(148,163,184,0.1);">
+                        <div class="iv-panel-head" style="margin-bottom:10px;">
+                            <div>
+                                <p class="eyebrow" style="margin-bottom:2px;">Interview score</p>
+                                <h3 style="margin:0; font-size:1.05rem;">Final breakdown</h3>
+                            </div>
+                            <span class="review-badge review-badge-score">Final</span>
+                        </div>
+                        <div id="final-score-panel" class="final-score-panel"></div>
+                    </div>
                 </div>
             </aside>
-        </section>
 
-        <div id="context-modal" class="modal hidden">
-            <div class="modal-card modal-card-lg">
-                <div class="modal-head">
-                    <div>
-                        <p class="eyebrow">Interview setup</p>
-                        <h3 id="context-modal-title">Create new chat</h3>
-                        <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and
-                            launch.</p>
-                    </div>
-                    <button id="close-modal" class="btn-primary modal-close-btn">Close</button>
+        </div><!-- /.iv-stage -->
+
+        <div class="iv-controls-bar">
+            <div class="iv-ctrl-left">
+                <button type="button" id="mic-btn" class="btn-primary outline">Voice</button>
+                <button type="button" id="iv-toggle-mute" class="iv-icon-btn is-active" title="Mute Aria">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <!-- speaker -->
+                        <path d="M3 7h3l4-4v14l-4-4H3V7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                        <path d="M14 7a4 4 0 0 1 0 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        <!-- slash shown when muted -->
+                        <line class="mute-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="display:none"/>
+                    </svg>
+                    Audio
+                </button>
+                <button type="button" id="iv-toggle-camera" class="iv-icon-btn is-active" title="Turn camera off">
+                    <!-- camera-on icon -->
+                    <svg class="cam-btn-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <rect x="1" y="5" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M13 9l5-3v8l-5-3V9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                        <!-- slash shown when off -->
+                        <line class="cam-off-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                    Camera
+                </button>
+                <span id="mic-status" class="muted" style="font-size:0.82rem;"></span>
+            </div>
+
+            <form id="ai-form" class="iv-input-form">
+                <textarea id="prompt" name="prompt" rows="2" maxlength="4000" placeholder="Type your answer or ask for clarification..."></textarea>
+                <button type="submit" id="send-btn" class="btn-primary">Send</button>
+            </form>
+
+            <div class="iv-ctrl-right">
+                <button type="button" id="iv-toggle-chat" class="iv-icon-btn" title="Toggle transcript">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <path d="M2 5h16M2 10h10M2 15h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Chat
+                </button>
+                <button type="button" id="iv-toggle-coach" class="iv-icon-btn" title="Toggle coach">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M10 7v4M10 14.5v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Coach
+                </button>
+                <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="context-modal" class="modal hidden">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">Interview setup</p>
+                    <h3 id="context-modal-title">Create new chat</h3>
+                    <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and launch.</p>
                 </div>
                 <form id="context-form">
                     <div class="setup-grid">

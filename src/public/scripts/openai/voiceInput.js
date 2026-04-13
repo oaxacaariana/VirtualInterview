@@ -11,8 +11,10 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
   recognition.interimResults = true;
   recognition.continuous = true;
 
+  // the reason it would stop at whenever you pasued was that dictBuffer captures only a single event snapshot dropped all the earlier chunks
   let listening = false;
-  let dictBuffer = '';
+  let baseText = '';       // whatever was in the textarea when mic started
+  let finalizedText = '';  // all finalized segments appeneded in this session
 
   recognition.onstart = () => {
     listening = true;
@@ -25,14 +27,14 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
     listening = false;
     micBtn.classList.remove('active');
     micBtn.classList.add('outline');
-    if (dictBuffer) {
-      const trimmed = promptInput.value.trim();
-      if (trimmed && !/[.!?]$/.test(trimmed)) {
-        promptInput.value = `${trimmed}.`;
+    // Add terminal punctuation if the session produced speech
+    if (finalizedText.trim()) {
+      const current = promptInput.value.trim();
+      if (current && !/[.!?]$/.test(current)) {
+        promptInput.value = `${current}.`;
       }
     }
-    dictBuffer = '';
-    delete promptInput.dataset.baseText;
+    finalizedText = '';
     if (micStatus.textContent.startsWith('Listening')) {
       micStatus.textContent = '';
     }
@@ -46,22 +48,19 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
   };
 
   recognition.onresult = (event) => {
-    let finalText = '';
     let interimText = '';
 
     for (let i = event.resultIndex; i < event.results.length; i += 1) {
       const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalText += transcript;
+        finalizedText += `${transcript} `;
       } else {
         interimText += transcript;
       }
     }
 
-    const existing = promptInput.dataset.baseText || promptInput.value;
-    dictBuffer = (finalText || interimText).trim();
-    promptInput.value = `${existing} ${dictBuffer}`.trim();
-    promptInput.dataset.baseText = existing;
+    // Rebuild value: pre-existing text + everything finalized + current interim
+    promptInput.value = `${baseText} ${finalizedText}${interimText}`.trim();
   };
 
   micBtn.addEventListener('click', () => {
@@ -69,9 +68,8 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
       recognition.stop();
       return;
     }
-
-    promptInput.dataset.baseText = promptInput.value;
-    micStatus.textContent = 'Listening... tap to stop';
+    baseText = promptInput.value;
+    finalizedText = '';
     recognition.start();
   });
 };

@@ -196,3 +196,31 @@ module.exports.listTranscripts = async (req, res) => {
     return res.status(500).json({ error: error.message || 'chatLogs unavailable' });
   }
 };
+
+module.exports.textToSpeech = async (req, res) => {
+  const openai = getOpenAIClient();
+  if (!openai) return res.status(503).json({ error: 'OpenAI not configured' });
+
+  const { text } = req.body;
+  if (!text || typeof text !== 'string') return res.status(400).json({ error: 'text required' });
+
+  // Truncate to 4096 chars — TTS model hard limit
+  const input = text.slice(0, 4096);
+
+  try {
+    const response = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'shimmer',
+      input,
+      response_format: 'mp3',
+    });
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Content-Length', buffer.length);
+    res.set('Cache-Control', 'no-store');
+    return res.send(buffer);
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'TTS failed' });
+  }
+};
