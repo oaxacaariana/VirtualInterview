@@ -278,6 +278,72 @@
     color: #93a2b8;
 }
 
+.auth-helper-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -6px 0 18px;
+}
+
+.auth-helper-row a {
+    color: #8fb8ff;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.auth-helper-row a:hover {
+    color: #dbeafe;
+    text-decoration: underline;
+}
+
+.form-message {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+}
+
+.form-message--error {
+    color: #ffd5d5;
+    background: rgba(180, 43, 43, 0.14);
+    border-color: rgba(246, 95, 95, 0.24);
+}
+
+.form-message--warning {
+    color: #fff1c6;
+    background: rgba(161, 98, 7, 0.16);
+    border-color: rgba(245, 158, 11, 0.26);
+}
+
+.temp-password-card {
+    margin-bottom: 18px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(8, 33, 29, 0.92), rgba(12, 27, 49, 0.92));
+    border: 1px solid rgba(45, 212, 191, 0.22);
+}
+
+.temp-password-card__label,
+.temp-password-card__note {
+    margin: 0;
+}
+
+.temp-password-card__value {
+    margin: 10px 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.82);
+    border: 1px dashed rgba(191, 219, 254, 0.28);
+    color: #f8fafc;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-align: center;
+}
+
+.temp-password-card__note {
+    color: #cbd5e1;
+}
+
 .form-visual {
     background: #151515;
     border: 1px solid #222;

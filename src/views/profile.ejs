@@ -17,6 +17,9 @@
               <a href="/resumes?archived=1" class="btn-outline">Archived Resumes</a>
               <% if (user && user.role === 'admin') { %><a href="/admin/users" class="btn-outline">Admin Panel</a><% } %>
             </div>
+            <% if (mustChangePassword) { %>
+              <p class="form-message form-message--warning">You signed in with a one-time password. Set a new password before logging out so you do not lose access.</p>
+            <% } %>
             <% if (error) { %><p style="color:#f88;"><%= error %></p><% } %>
             <% if (success) { %><p style="color:#6f6;"><%= success %></p><% } %>
             <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">

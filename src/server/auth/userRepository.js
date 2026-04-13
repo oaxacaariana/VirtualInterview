@@ -95,6 +95,14 @@ const updateUserById = async (collections, userId, updates) => {
     normalizedUpdates.passwordHash = updates.passwordHash;
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporaryPasswordHash')) {
+    normalizedUpdates.temporaryPasswordHash = updates.temporaryPasswordHash;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporaryPasswordIssuedAt')) {
+    normalizedUpdates.temporaryPasswordIssuedAt = updates.temporaryPasswordIssuedAt;
+  }
+
   if (Object.prototype.hasOwnProperty.call(updates, 'role')) {
     const normalizedRole = String(updates.role || '').trim().toLowerCase();
     if (!ADMIN_ROLES.has(normalizedRole)) {
