@@ -23,6 +23,7 @@ const toggleCoachBtn = document.getElementById('iv-toggle-coach');
 const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
 const cameraToggleBtn = document.getElementById('iv-toggle-camera');
 const muteBtn = document.getElementById('iv-toggle-mute');
+const interviewBootOverlay = document.getElementById('interview-boot-overlay');
 
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
@@ -376,6 +377,15 @@ const elements = {
   analysisPanel: document.getElementById('analysis-panel'),
   finalScorePanel: document.getElementById('final-score-panel'),
   analysisPrivacyBtn: document.getElementById('analysis-privacy-btn'),
+  toggleChatBtn,
+  toggleCoachBtn,
+  coachTabLive: document.getElementById('coach-tab-live'),
+  coachTabFinal: document.getElementById('coach-tab-final'),
+  coachTabPanelLive: document.getElementById('coach-tabpanel-live'),
+  coachTabPanelFinal: document.getElementById('coach-tabpanel-final'),
+  completeBanner: document.getElementById('interview-complete-banner'),
+  completeNewChatBtn: document.getElementById('interview-complete-new-chat'),
+  contextFeedback: document.getElementById('context-modal-feedback'),
 };
 
 const state = createInitialState();
@@ -385,6 +395,7 @@ const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const ACTIVITY_PERSIST_INTERVAL_MS = 15 * 1000;
 let inactivityTimer = null;
 let lastPersistedActivityAt = 0;
+let interviewBootLoading = false;
 
 createVoiceInput({
   micBtn: elements.micBtn,
@@ -400,7 +411,46 @@ const newChatId = () => {
 };
 
 const persist = () => saveState(state);
-const hasActiveInterview = () => !!(state.chatId && state.contextSet && !state.interviewComplete);
+const hasInterviewVisible = () => state.history.length > 0 || !!state.finalReview;
+const hasStartedInterview = () => state.history.length > 0;
+const hasActiveInterview = () => !!(hasStartedInterview() && state.chatId && state.contextSet && !state.interviewComplete);
+
+const syncInteractiveControls = () => {
+  const canRespond = hasStartedInterview() && !state.interviewComplete && !interviewBootLoading;
+
+  if (elements.promptInput) {
+    elements.promptInput.disabled = !canRespond;
+  }
+  if (elements.sendBtn) {
+    elements.sendBtn.disabled = !canRespond;
+  }
+  if (elements.micBtn) {
+    elements.micBtn.disabled = !canRespond;
+  }
+  if (elements.endBtn) {
+    elements.endBtn.disabled = !hasStartedInterview() || state.interviewComplete || interviewBootLoading;
+  }
+  if (elements.setupBtn) {
+    elements.setupBtn.disabled = !hasInterviewVisible() || interviewBootLoading;
+  }
+  if (elements.contextBtn) {
+    elements.contextBtn.disabled = interviewBootLoading;
+  }
+};
+
+const syncSetupModalState = () => {
+  contextModal.setDismissible(hasInterviewVisible() && !interviewBootLoading);
+};
+
+const setInterviewBootLoading = (loading) => {
+  interviewBootLoading = loading;
+  if (interviewBootOverlay) {
+    interviewBootOverlay.classList.toggle('hidden', !loading);
+    interviewBootOverlay.setAttribute('aria-hidden', String(!loading));
+  }
+  syncInteractiveControls();
+  syncSetupModalState();
+};
 
 const markActivity = () => {
   state.lastActivityAt = Date.now();
@@ -453,12 +503,25 @@ const addUserMessage = (content, turnNumber) => {
 
 const addAssistantMessage = (content, options = {}) => {
   chatView.addMessage('assistant', content);
-  if (options.subtitle !== false) {
+  const shouldShowSubtitle = options.subtitle !== false;
+  const shouldSpeak = options.speak !== false;
+
+  if (shouldShowSubtitle) {
     setSubtitle(content);
   }
-  if (options.speak !== false) {
+  if (shouldSpeak) {
     void tts.play(content);
   }
+};
+
+const openCoachForFinalReview = () => {
+  chatPanel?.classList.remove('is-open');
+  chatPanel?.setAttribute('aria-hidden', 'true');
+  toggleChatBtn?.classList.remove('is-active');
+  coachPanel?.classList.add('is-open');
+  coachPanel?.setAttribute('aria-hidden', 'false');
+  toggleCoachBtn?.classList.add('is-active');
+  chatView.setCoachTab('final');
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -509,8 +572,13 @@ const resetChat = () => {
   chatView.setFinalPlaceholder();
   clearState();
   contextModal.populate(state.context);
+  contextModal.setFeedback('');
+  contextModal.setBusy(false);
   contextModal.setMode('edit');
   chatView.setCoachBlurred(state.coachBlurred);
+  chatView.setCoachTab('live');
+  setInterviewBootLoading(false);
+  chatView.setStatus('Set up interview', false);
 };
 
 const hydrate = () => {
@@ -525,6 +593,24 @@ const hydrate = () => {
   }
 
   chatView.clearMessages();
+  if (!hasInterviewVisible()) {
+    contextModal.populate(state.context);
+    contextModal.setFeedback('');
+    contextModal.setBusy(false);
+    contextModal.setMode('edit');
+    chatView.setInterviewComplete(false);
+    chatView.setIdleAnalysis();
+    chatView.setFinalPlaceholder();
+    chatView.setCoachBlurred(state.coachBlurred);
+    chatView.setCoachTab('live');
+    clearSubtitle();
+    contextModal.open();
+    chatView.setStatus('Set up interview', false);
+    syncSetupModalState();
+    syncInteractiveControls();
+    return true;
+  }
+
   let turnNumber = 0;
   state.history.forEach((message) => {
     if (message.role === 'user') {
@@ -542,16 +628,21 @@ const hydrate = () => {
   }
 
   contextModal.populate(state.context);
+  contextModal.setFeedback('');
+  contextModal.setBusy(false);
   contextModal.setMode('view');
   chatView.setInterviewComplete(state.interviewComplete);
   chatView.setCoachBlurred(state.coachBlurred);
   if (state.finalReview) {
     chatView.showFinalReview(state.finalReview);
+    chatView.setCoachTab('final');
   } else {
     chatView.setIdleAnalysis();
     chatView.setFinalPlaceholder();
   }
   contextModal.close();
+  syncSetupModalState();
+  syncInteractiveControls();
   scheduleInactivityTimeout();
   return true;
 };
@@ -564,9 +655,13 @@ const completeInterview = async (assistantMessage) => {
     state.history.push({ role: 'assistant', content: assistantMessage });
   }
   chatView.setInterviewComplete(true);
+  syncInteractiveControls();
+  syncSetupModalState();
+  openCoachForFinalReview();
   if (countUserTurns(state.history) === 0) {
     state.finalReview = null;
     chatView.showFinalReview(null);
+    chatView.setCoachTab('final');
     persist();
     return;
   }
@@ -576,6 +671,7 @@ const completeInterview = async (assistantMessage) => {
     state.finalReview = closeResult?.finalReview || null;
     if (state.finalReview) {
       chatView.showFinalReview(state.finalReview);
+      chatView.setCoachTab('final');
     }
   } catch (error) {
     addAssistantMessage(`Final review failed: ${error.message}`);
@@ -668,24 +764,24 @@ elements.form.addEventListener('submit', async (event) => {
 contextModal.contextForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   tts.warmUp();
+  contextModal.setFeedback('');
 
   state.context = contextModal.read();
   state.contextSet = !!(state.context.company && state.context.role && state.context.resumeId);
-  if (!state.chatId) {
-    state.chatId = newChatId();
-  }
-
-  persist();
-  contextModal.close();
-  contextModal.setMode('view');
 
   if (!state.contextSet) {
-    addAssistantMessage('Please set company, role, and pick a resume before chatting.');
+    contextModal.setFeedback('Choose a company, role, and resume before launching the interview.');
     return;
   }
 
+  state.chatId = newChatId();
+  persist();
   markActivity();
-  setThinking(true);
+  contextModal.close({ force: true });
+  contextModal.setBusy(true);
+  clearSubtitle();
+  chatView.setStatus('Preparing interview...', true);
+  setInterviewBootLoading(true);
   try {
     const data = await startInterview({
       ...state.context,
@@ -693,24 +789,36 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
       chatId: state.chatId,
     });
 
-    if (data?.opener) {
-      addAssistantMessage(data.opener);
-      state.history.push({ role: 'assistant', content: data.opener });
-      state.chatId = data.chatId || state.chatId;
-      if (data.backgroundDoc) {
-        state.context.backgroundDoc = data.backgroundDoc;
-        state.context.resumeText = data.resumeText || '';
-        state.context.jobDescription = data.jobDescription || '';
-        state.context.researchSummary = data.researchSummary || '';
-        state.context.webSignals = data.webSignals || '';
-      }
-      markActivity();
-      scheduleInactivityTimeout();
+    if (!data?.opener) {
+      throw new Error('Interview setup finished without an opening prompt. Please try again.');
     }
+
+    addAssistantMessage(data.opener);
+    state.history.push({ role: 'assistant', content: data.opener });
+    state.chatId = data.chatId || state.chatId;
+    if (data.backgroundDoc) {
+      state.context.backgroundDoc = data.backgroundDoc;
+      state.context.resumeText = data.resumeText || '';
+      state.context.jobDescription = data.jobDescription || '';
+      state.context.researchSummary = data.researchSummary || '';
+      state.context.webSignals = data.webSignals || '';
+    }
+    contextModal.setMode('view');
+    markActivity();
+    scheduleInactivityTimeout();
   } catch (error) {
-    addAssistantMessage(`Error preparing interview: ${error.message}`);
+    contextModal.setMode('edit');
+    contextModal.setFeedback(`Error preparing interview: ${error.message}`);
+    contextModal.open();
+    chatView.setStatus('Setup needed', false);
   } finally {
-    setThinking(false);
+    contextModal.setBusy(false);
+    setInterviewBootLoading(false);
+    if (hasStartedInterview() && !state.interviewComplete) {
+      chatView.setStatus('Ready', false);
+    }
+    syncInteractiveControls();
+    syncSetupModalState();
   }
 });
 
@@ -734,6 +842,12 @@ elements.analysisPrivacyBtn?.addEventListener('click', () => {
   state.coachBlurred = !state.coachBlurred;
   chatView.setCoachBlurred(state.coachBlurred);
   persist();
+});
+
+elements.completeNewChatBtn?.addEventListener('click', () => {
+  resetChat();
+  contextModal.setMode('edit');
+  contextModal.open();
 });
 
 ['pointerdown', 'keydown'].forEach((eventName) => {
@@ -762,3 +876,5 @@ if (!hydrate()) {
 }
 
 chatView.setCoachBlurred(state.coachBlurred);
+syncInteractiveControls();
+syncSetupModalState();

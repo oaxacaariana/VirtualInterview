@@ -60,7 +60,25 @@
                             </select>
 
                             <label>Reset Password</label>
-                            <input type="password" name="password" placeholder="Leave blank to keep current password">
+                            <div class="password-field">
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="admin-password"
+                                    placeholder="Leave blank to keep current password"
+                                >
+                                <button
+                                    type="button"
+                                    class="password-toggle"
+                                    data-password-toggle
+                                    data-target="admin-password"
+                                    aria-controls="admin-password"
+                                    aria-label="Show password"
+                                >
+                                    Show
+                                </button>
+                            </div>
+                            <p class="muted" style="margin-top:8px;">Existing passwords are stored as secure hashes, so only a newly entered reset password can be shown here.</p>
 
                             <button type="submit" class="btn-primary full-width">Save user changes</button>
                         </form>
@@ -71,5 +89,18 @@
     </section>
 
     <%- include('partials/footer'); %>
+    <script>
+        document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+                const target = document.getElementById(toggle.dataset.target);
+                if (!target) return;
+
+                const showing = target.type === 'text';
+                target.type = showing ? 'password' : 'text';
+                toggle.textContent = showing ? 'Show' : 'Hide';
+                toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            });
+        });
+    </script>
 </body>
 </html>

@@ -43,7 +43,11 @@ export const createTTS = ({ onStart, onEnd }) => {
         body: JSON.stringify({ text }),
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        console.warn('TTS request failed:', detail || res.statusText);
+        return;
+      }
 
       const arrayBuffer = await res.arrayBuffer();
       const ctx = getCtx();
@@ -67,7 +71,8 @@ export const createTTS = ({ onStart, onEnd }) => {
       currentSource = source;
       onStart?.();
       source.start(0);
-    } catch {
+    } catch (error) {
+      console.warn('TTS playback failed:', error);
       onEnd?.();
     }
   };

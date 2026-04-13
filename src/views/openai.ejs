@@ -126,6 +126,30 @@
                 <p id="iv-subtitle-text" class="iv-subtitle-text"></p>
             </div>
 
+            <div id="interview-complete-banner" class="iv-complete-banner hidden" aria-live="polite">
+                <p class="eyebrow">Interview finished</p>
+                <h3>Final breakdown ready</h3>
+                <p>Your practice session is closed. Review the final score, inspect the chat history, or start a new interview.</p>
+                <div class="iv-complete-actions">
+                    <a href="/openai/logs" class="btn-outline">View chat history</a>
+                    <button type="button" id="interview-complete-new-chat" class="btn-primary">Start new chat</button>
+                </div>
+            </div>
+
+            <div id="interview-boot-overlay" class="iv-boot-overlay hidden" aria-live="polite" aria-hidden="true">
+                <div class="iv-boot-card">
+                    <div class="iv-boot-spinner" aria-hidden="true"></div>
+                    <p class="eyebrow">Preparing interview</p>
+                    <h3 id="interview-boot-title">Building your first prompt</h3>
+                    <p id="interview-boot-text">We are reading your resume, pulling company context, and shaping Aria's background so the opener feels researched instead of generic.</p>
+                    <div class="iv-boot-steps" aria-hidden="true">
+                        <span>Resume context</span>
+                        <span>Company research</span>
+                        <span>Interviewer background</span>
+                    </div>
+                </div>
+            </div>
+
             <aside class="iv-side-panel" id="iv-chat-panel" aria-hidden="true">
                 <div class="iv-panel-head">
                     <div>
@@ -138,7 +162,7 @@
             </aside>
 
             <aside class="iv-side-panel iv-coach-side" id="iv-coach-panel" aria-hidden="true">
-                <div class="iv-panel-head">
+                <div class="iv-panel-head iv-panel-head--coach">
                     <div>
                         <p class="eyebrow" style="margin-bottom:2px;">Response coach</p>
                         <h3 style="margin:0; font-size:1.05rem;">Live read</h3>
@@ -150,15 +174,16 @@
                     </div>
                 </div>
                 <div class="iv-panel-scroll">
-                    <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
-                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(148,163,184,0.1);">
-                        <div class="iv-panel-head" style="margin-bottom:10px;">
-                            <div>
-                                <p class="eyebrow" style="margin-bottom:2px;">Interview score</p>
-                                <h3 style="margin:0; font-size:1.05rem;">Final breakdown</h3>
-                            </div>
-                            <span class="review-badge review-badge-score">Final</span>
-                        </div>
+                    <div class="coach-tabs" role="tablist" aria-label="Coach views">
+                        <button type="button" id="coach-tab-live" class="coach-tab is-active" role="tab" aria-selected="true" aria-controls="coach-tabpanel-live">Live coach</button>
+                        <button type="button" id="coach-tab-final" class="coach-tab" role="tab" aria-selected="false" aria-controls="coach-tabpanel-final">Final breakdown</button>
+                    </div>
+
+                    <div id="coach-tabpanel-live" class="coach-tab-panel is-active" role="tabpanel" aria-labelledby="coach-tab-live">
+                        <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
+                    </div>
+
+                    <div id="coach-tabpanel-final" class="coach-tab-panel" role="tabpanel" aria-labelledby="coach-tab-final">
                         <div id="final-score-panel" class="final-score-panel"></div>
                     </div>
                 </div>
@@ -176,6 +201,7 @@
                     </svg>
                     Audio
                 </button>
+                <span class="iv-audio-note">AI voice</span>
                 <button type="button" id="iv-toggle-camera" class="iv-icon-btn is-active" title="Turn camera off">
                     <svg class="cam-btn-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
                         <rect x="1" y="5" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/>
@@ -199,12 +225,13 @@
                     </svg>
                     Chat
                 </button>
-                <button type="button" id="iv-toggle-coach" class="iv-icon-btn" title="Toggle coach">
+                <button type="button" id="iv-toggle-coach" class="iv-icon-btn iv-icon-btn-coach" title="Toggle coach">
                     <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
                         <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.8"/>
                         <path d="M10 7v4M10 14.5v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                     Coach
+                    <span class="iv-btn-badge">Key</span>
                 </button>
                 <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End</button>
             </div>
@@ -218,6 +245,7 @@
                     <p class="eyebrow">Interview setup</p>
                     <h3 id="context-modal-title">Create new chat</h3>
                     <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and launch.</p>
+                    <p id="context-modal-feedback" class="context-modal-feedback hidden" role="alert"></p>
                 </div>
                 <button id="close-modal" class="btn-primary modal-close-btn">Close</button>
             </div>

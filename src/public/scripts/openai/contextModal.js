@@ -11,6 +11,7 @@ export const createContextModal = (elements) => {
     contextSubmit,
     contextModalTitle,
     contextModalSubtitle,
+    contextFeedback,
     ctxCompany,
     ctxRole,
     ctxResume,
@@ -29,6 +30,20 @@ export const createContextModal = (elements) => {
   } = elements;
 
   let mode = 'edit';
+  let dismissible = true;
+  let busy = false;
+
+  const editableFields = [
+    ctxCompany,
+    ctxRole,
+    ctxWebSearch,
+    ctxSilly,
+    ctxCustomTone,
+    ctxSeriousness,
+    ctxStyle,
+    ctxDifficulty,
+    ctxComplexity,
+  ];
 
   const formatSliderValue = (value, digits = 1) => Number(value).toFixed(digits);
 
@@ -66,11 +81,12 @@ export const createContextModal = (elements) => {
 
   const toggleCustomTone = () => {
     const enabled = ctxSilly.checked;
+    const isReadonly = mode === 'view' || busy;
     const block = document.getElementById('custom-tone-block');
     if (block) {
       block.classList.toggle('hidden', !enabled);
     }
-    ctxCustomTone.disabled = !enabled;
+    ctxCustomTone.disabled = !enabled || isReadonly;
     if (!enabled) {
       ctxCustomTone.value = '';
     }
@@ -83,8 +99,49 @@ export const createContextModal = (elements) => {
     });
   };
 
-  const open = () => contextModal.classList.remove('hidden');
-  const close = () => contextModal.classList.add('hidden');
+  const setFeedback = (message = '', tone = 'error') => {
+    if (!contextFeedback) {
+      return;
+    }
+
+    contextFeedback.textContent = message;
+    contextFeedback.classList.toggle('hidden', !message);
+    contextFeedback.dataset.tone = tone;
+  };
+
+  const syncModalUi = () => {
+    const canClose = dismissible && !busy;
+    closeModal.classList.toggle('hidden', !dismissible);
+    closeModal.disabled = !canClose;
+    closeModal.setAttribute('aria-hidden', String(!dismissible));
+    contextSubmit.disabled = busy;
+    contextSubmit.textContent = busy ? 'Preparing interview...' : 'Create new chat';
+  };
+
+  const applyFieldState = () => {
+    const isView = mode === 'view';
+    editableFields.forEach((field) => {
+      field.disabled = isView || busy;
+    });
+
+    resumeCards.forEach((card) => {
+      card.classList.toggle('is-readonly', isView || busy);
+    });
+
+    toggleCustomTone();
+  };
+
+  const open = () => {
+    syncModalUi();
+    contextModal.classList.remove('hidden');
+  };
+
+  const close = (options = {}) => {
+    if ((!dismissible || busy) && !options.force) {
+      return;
+    }
+    contextModal.classList.add('hidden');
+  };
 
   const setMode = (nextMode) => {
     mode = nextMode;
@@ -95,24 +152,19 @@ export const createContextModal = (elements) => {
       ? 'Review the current resume, sliders, and toggles without interrupting the interview.'
       : 'Choose the resume, tune the interviewer, and launch.';
     contextSubmit.classList.toggle('hidden', isView);
+    applyFieldState();
+    syncModalUi();
+  };
 
-    [
-      ctxCompany,
-      ctxRole,
-      ctxWebSearch,
-      ctxSilly,
-      ctxCustomTone,
-      ctxSeriousness,
-      ctxStyle,
-      ctxDifficulty,
-      ctxComplexity,
-    ].forEach((field) => {
-      field.disabled = isView;
-    });
+  const setDismissible = (nextDismissible) => {
+    dismissible = !!nextDismissible;
+    syncModalUi();
+  };
 
-    resumeCards.forEach((card) => {
-      card.classList.toggle('is-readonly', isView);
-    });
+  const setBusy = (nextBusy) => {
+    busy = !!nextBusy;
+    applyFieldState();
+    syncModalUi();
   };
 
   const populate = (context) => {
@@ -177,7 +229,7 @@ export const createContextModal = (elements) => {
 
   resumeCards.forEach((card) => {
     card.addEventListener('click', () => {
-      if (mode === 'view') {
+      if (mode === 'view' || busy) {
         return;
       }
       syncSelectedResume(card.dataset.resumeId);
@@ -187,11 +239,15 @@ export const createContextModal = (elements) => {
   updateSliderLabels();
   toggleCustomTone();
   setMode('edit');
+  syncModalUi();
 
   return {
     open,
     close,
     setMode,
+    setDismissible,
+    setBusy,
+    setFeedback,
     populate,
     read,
     contextForm,

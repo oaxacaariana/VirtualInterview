@@ -3,7 +3,18 @@
  * Inputs: Express req/res objects, interview request payloads, session state, and app-local collections.
  * Outputs: Renders the interview page and returns JSON responses for interview actions.
  */
-const { getOpenAIClient, interviewModel } = require('../shared/openaiClient');
+const {
+  getOpenAIClient,
+  toFile,
+  interviewModel,
+  ttsModel,
+  ttsVoice,
+  ttsFormat,
+  ttsInstructions,
+  transcribeModel,
+  transcribeLanguage,
+  transcribePrompt,
+} = require('../shared/openaiClient');
 const {
   requireConfiguredClient,
   validateStartInterviewInput,
@@ -110,6 +121,44 @@ const getReview = async (req, res) => {
   }
 };
 
+const transcribeSpeech = async (req, res) => {
+  try {
+    const openaiClient = getOpenAIClient();
+    requireConfiguredClient(openaiClient);
+
+    if (!req.file?.buffer?.length) {
+      return res.status(400).json({ error: 'audio file required' });
+    }
+
+    const audioFile = await toFile(
+      req.file.buffer,
+      req.file.originalname || 'recording.webm',
+      { type: req.file.mimetype || 'audio/webm' }
+    );
+
+    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    const language = typeof req.body?.language === 'string' ? req.body.language.trim() : '';
+
+    const transcription = await openaiClient.audio.transcriptions.create({
+      file: audioFile,
+      model: transcribeModel,
+      language: language || transcribeLanguage,
+      prompt: prompt || transcribePrompt,
+      response_format: 'json',
+    });
+
+    return res.json({
+      text: transcription.text || '',
+      model: transcribeModel,
+    });
+  } catch (error) {
+    console.error('transcribeSpeech failed:', error);
+    return res
+      .status(error.status || 500)
+      .json({ error: error.message || 'Speech transcription failed.' });
+  }
+};
+
 const textToSpeech = async (req, res) => {
   try {
     const openaiClient = getOpenAIClient();
@@ -120,17 +169,36 @@ const textToSpeech = async (req, res) => {
       return res.status(400).json({ error: 'text required' });
     }
 
-    const response = await openaiClient.audio.speech.create({
-      model: 'tts-1',
-      voice: 'shimmer',
+    const requestedVoice = typeof req.body?.voice === 'string' ? req.body.voice.trim() : '';
+    const requestedInstructions =
+      typeof req.body?.instructions === 'string' ? req.body.instructions.trim() : '';
+
+    const speechRequest = {
+      model: ttsModel,
+      voice: requestedVoice || ttsVoice,
       input: text.slice(0, 4096),
-      response_format: 'mp3',
-    });
+      response_format: ttsFormat,
+    };
+
+    if (ttsModel === 'gpt-4o-mini-tts' || ttsModel === 'gpt-4o-realtime-preview') {
+      speechRequest.instructions = requestedInstructions || ttsInstructions;
+    }
+
+    const response = await openaiClient.audio.speech.create(speechRequest);
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    res.set('Content-Type', 'audio/mpeg');
+    const contentType =
+      ttsFormat === 'wav'
+        ? 'audio/wav'
+        : ttsFormat === 'mp3'
+          ? 'audio/mpeg'
+          : 'application/octet-stream';
+
+    res.set('Content-Type', contentType);
     res.set('Content-Length', buffer.length);
     res.set('Cache-Control', 'no-store');
+    res.set('X-TTS-Model', ttsModel);
+    res.set('X-TTS-Voice', requestedVoice || ttsVoice);
     return res.send(buffer);
   } catch (error) {
     console.error('textToSpeech failed:', error);
@@ -144,5 +212,6 @@ module.exports = {
   startInterview,
   closeChat,
   getReview,
+  transcribeSpeech,
   textToSpeech,
 };

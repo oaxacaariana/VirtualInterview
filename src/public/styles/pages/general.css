@@ -278,6 +278,36 @@
     color: #93a2b8;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 84px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    border: 1px solid rgba(96, 165, 250, 0.18);
+    background: rgba(255, 255, 255, 0.04);
+    color: #dbeafe;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.password-toggle:hover {
+    background: rgba(96, 165, 250, 0.12);
+    border-color: rgba(96, 165, 250, 0.32);
+    color: #ffffff;
+}
+
 .auth-helper-row {
     display: flex;
     justify-content: flex-end;

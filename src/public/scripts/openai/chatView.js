@@ -34,6 +34,13 @@ export const createChatView = (elements) => {
     endBtn,
     form,
     analysisPrivacyBtn,
+    toggleChatBtn,
+    toggleCoachBtn,
+    coachTabLive,
+    coachTabFinal,
+    coachTabPanelLive,
+    coachTabPanelFinal,
+    completeBanner,
   } = elements;
 
   const setStatus = (label, active = false) => {
@@ -48,6 +55,16 @@ export const createChatView = (elements) => {
       analysisPrivacyBtn.textContent = blurred ? 'Show coach' : 'Blur coach';
       analysisPrivacyBtn.classList.toggle('active', blurred);
     }
+  };
+
+  const setCoachTab = (tab) => {
+    const showFinal = tab === 'final';
+    coachTabLive?.classList.toggle('is-active', !showFinal);
+    coachTabLive?.setAttribute('aria-selected', String(!showFinal));
+    coachTabFinal?.classList.toggle('is-active', showFinal);
+    coachTabFinal?.setAttribute('aria-selected', String(showFinal));
+    coachTabPanelLive?.classList.toggle('is-active', !showFinal);
+    coachTabPanelFinal?.classList.toggle('is-active', showFinal);
   };
 
   const setIdleAnalysis = () => {
@@ -199,6 +216,14 @@ export const createChatView = (elements) => {
           <p class="coach-card__eyebrow">Interview pattern</p>
           <p>${escapeHtml(review.patterns)}</p>
         </div>
+
+        <div class="coach-card final-score-next">
+          <p class="coach-card__eyebrow">Next step</p>
+          <p>Interview complete. Review the saved transcript any time from your history.</p>
+          <div class="final-score-actions">
+            <a href="/openai/logs" class="btn-outline">Open chat history</a>
+          </div>
+        </div>
       </div>
     `;
   };
@@ -267,23 +292,40 @@ export const createChatView = (elements) => {
     promptInput.disabled = complete;
     sendBtn.disabled = complete;
     endBtn.disabled = complete;
+    if (toggleChatBtn) {
+      toggleChatBtn.disabled = complete;
+      toggleChatBtn.classList.toggle('is-disabled', complete);
+      toggleChatBtn.classList.remove('is-active');
+    }
+    if (toggleCoachBtn) {
+      toggleCoachBtn.classList.toggle('is-finished', complete);
+    }
     form.classList.toggle('hidden', complete);
+    completeBanner?.classList.toggle('hidden', !complete);
     if (complete) {
-      setStatus('Complete');
+      setCoachTab('final');
+      setStatus('Interview complete');
     } else {
+      completeBanner?.classList.add('hidden');
+      setCoachTab('live');
       setStatus('Ready');
       endBtn.disabled = false;
     }
   };
 
+  coachTabLive?.addEventListener('click', () => setCoachTab('live'));
+  coachTabFinal?.addEventListener('click', () => setCoachTab('final'));
+
   setIdleAnalysis();
   setFinalPlaceholder();
+  setCoachTab('live');
 
   return {
     addMessage,
     attachInlineAnalysis,
     clearMessages,
     setCoachBlurred,
+    setCoachTab,
     setStatus,
     setInterviewComplete,
     showTurnAnalysis,

@@ -30,7 +30,7 @@ export const createInitialState = () => ({
   turnAnalyses: {},
   finalReview: null,
   lastActivityAt: 0,
-  coachBlurred: false,
+  coachBlurred: true,
 });
 
 export const replaceState = (state, nextState) => {
@@ -43,5 +43,7 @@ export const replaceState = (state, nextState) => {
   state.turnAnalyses = nextState.turnAnalyses || {};
   state.finalReview = nextState.finalReview || null;
   state.lastActivityAt = Number(nextState.lastActivityAt) || 0;
-  state.coachBlurred = !!nextState.coachBlurred;
+  state.coachBlurred = Object.prototype.hasOwnProperty.call(nextState || {}, 'coachBlurred')
+    ? !!nextState.coachBlurred
+    : true;
 };
