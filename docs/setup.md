@@ -6,6 +6,7 @@
 - npm
 - MongoDB Atlas or local MongoDB
 - OpenAI API key
+- a modern desktop browser for microphone, camera, and speech features
 
 ## Install
 
@@ -78,3 +79,7 @@ That file loads:
 - Uploaded files are stored in the top-level `uploads/` directory.
 - The app creates `uploads/` automatically if it does not exist.
 - The resume parser currently supports PDF and DOCX inputs using the current parser implementation in `src/server/shared/resumeParser.js`.
+- The interview UI serves local eye-tracking assets from `src/public/models/` and `src/public/mediapipe/`.
+- Voice input depends on browser speech-recognition support.
+- Camera preview and eye-contact tracking require the user to grant browser camera access.
+- Interviewer TTS requires a valid `OPENAI_API_KEY` because it is generated server-side through OpenAI.

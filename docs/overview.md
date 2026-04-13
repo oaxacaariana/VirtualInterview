@@ -12,6 +12,10 @@ The app currently supports:
 - resume scoring against a job description
 - archived and active resume views
 - interview session generation
+- avatar-based interview screen with side panels and subtitles
+- browser speech-to-text for user responses
+- OpenAI text-to-speech for interviewer responses
+- optional camera preview and eye-contact tracking during interviews
 - interview transcript persistence
 - post-interview scoring and review retrieval
 - admin-only access to user accounts, resumes, and chat logs
@@ -23,7 +27,8 @@ The app currently supports:
 3. The app parses the resume and generates a scorecard.
 4. The user can review saved resumes and prior score results.
 5. The user starts a mock interview using a selected resume.
-6. The app stores interview turns, chat logs, and final review data.
+6. The interview screen can use browser mic, camera, subtitles, and eye-contact tracking while the conversation runs.
+7. The app stores interview turns, chat logs, and final review data.
 
 ## Admin Workflow
 
@@ -38,4 +43,4 @@ The app currently supports:
 - Express routes and controllers
 - MongoDB-backed persistence
 - custom Mongo-backed session store
-- browser-side JavaScript for interview interactions and voice input
+- browser-side JavaScript for interview interactions, voice input, TTS playback, camera preview, and eye-tracking hooks

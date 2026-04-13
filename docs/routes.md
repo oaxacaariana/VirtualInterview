@@ -104,7 +104,7 @@ Renders the selected user's saved chat log detail page.
 
 ### `GET /openai`
 
-Renders the interview page.
+Renders the interview page with the avatar stage, setup modal, transcript/coach panels, and browser-side camera or voice controls.
 
 ### `POST /openai/start`
 
@@ -121,6 +121,10 @@ Closes the current interview and triggers final review behavior.
 ### `GET /openai/review`
 
 Fetches review data for an interview turn.
+
+### `POST /openai/tts`
+
+Generates interviewer speech audio for browser playback.
 
 ### `GET /openai/logs`
 
@@ -148,10 +152,12 @@ Renders transcript details for one chat.
 
 1. User selects a resume and enters interview context.
 2. The app loads resume text and prior context.
-3. The app generates interview prompts with OpenAI.
-4. Each turn is persisted.
-5. Turn reviews are generated asynchronously.
-6. Final review is generated when the interview is closed.
+3. The browser can enable microphone input, camera preview, and optional eye-contact tracking.
+4. The app generates interview prompts with OpenAI.
+5. Interviewer replies can be spoken back through the TTS endpoint.
+6. Each turn is persisted.
+7. Turn reviews are generated asynchronously.
+8. Final review is generated when the interview is closed.
 
 ## High-Level Admin Flow
 

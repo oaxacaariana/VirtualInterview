@@ -115,9 +115,29 @@ Frontend assets are split into:
 - `src/views` for EJS templates
 - `src/public/scripts` for browser-side logic
 - `src/public/styles` for grouped CSS
+- `src/public/models` for local face/eye-tracking model assets
+- `src/public/mediapipe` for local Mediapipe face-mesh assets
 
 CSS grouping:
 
 - `foundation/` for base and responsive rules
 - `shared/` for reusable components
 - `pages/` for page-specific styling
+
+### Interview Frontend Modules
+
+The interview experience now spans a few browser-side areas:
+
+- `src/views/openai.ejs` renders the avatar stage, camera picture-in-picture, transcript/coach side panels, and setup modal
+- `src/public/scripts/openai/` handles interview API calls, local UI state, speech-to-text, and interviewer text-to-speech playback
+- `src/public/scripts/eye-tracking/` contains the imported teammate eye-tracking bundle and calibration helpers
+- `src/public/styles/pages/interview.css` contains the avatar-stage and interview-shell styling
+
+### Interview Request and Browser Flow
+
+The server still owns interview generation and persistence, but the browser layer now also manages:
+
+1. microphone input via browser speech recognition
+2. interviewer reply playback via `/openai/tts`
+3. optional camera preview
+4. optional eye-contact tracking against the on-screen avatar region

@@ -9,6 +9,7 @@ When adding or changing features, update docs in this order:
 3. Update `docs/data-model.md` if a collection shape changed.
 4. Update `docs/architecture.md` if folders or request flow changed.
 5. Update `docs/environment.md` if a config variable changed.
+6. Update setup or overview docs if browser permissions, media behavior, or user-facing interview UX changed.
 
 ## Good Places to Document in Code
 

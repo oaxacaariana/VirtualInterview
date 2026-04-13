@@ -21,6 +21,8 @@ Virtual Interview is an Express + EJS application for:
 - resume upload and storage
 - resume scoring against a target job description
 - mock interview generation using OpenAI
+- AI interviewer avatar playback with subtitles and TTS
+- browser speech-to-text, camera preview, and eye-contact tracking
 - transcript history and review persistence
 
 ## Current Stack

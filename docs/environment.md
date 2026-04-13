@@ -9,6 +9,7 @@ Used by:
 - resume scoring
 - interview generation
 - interview review flow
+- interviewer text-to-speech generation
 - optional web research flow
 
 ### `MONGODB_URI`
