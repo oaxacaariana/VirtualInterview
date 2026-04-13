@@ -1,3 +1,8 @@
+/**
+ * Interview frontend entry module.
+ * Inputs: DOM nodes, browser events, persisted local state, and interview API responses.
+ * Outputs: A fully wired interview UI with chat flow, modal setup, persistence, and inactivity handling.
+ */
 import { startInterview, askInterview, closeInterview, getTurnReview } from './api.js';
 import { createChatView } from './chatView.js';
 import { createContextModal } from './contextModal.js';

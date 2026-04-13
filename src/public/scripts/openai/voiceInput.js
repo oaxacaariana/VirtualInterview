@@ -1,3 +1,8 @@
+/**
+ * Voice input helper module.
+ * Inputs: DOM controls for microphone state and the prompt input field.
+ * Outputs: Browser speech-recognition wiring that appends dictated text into the prompt box.
+ */
 export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
