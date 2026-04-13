@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin User Resumes | Virtual Interview</title>
+    <link rel="stylesheet" href="/styles/app.css">
+</head>
+<body>
+    <%- include('partials/navbar'); %>
+
+    <section class="results-section" style="text-align:left;">
+        <div class="results-hero" style="align-items:flex-start;">
+            <div>
+                <p class="eyebrow">Admin resume access</p>
+                <h1 style="margin:2px 0 6px;"><%= targetUser.name || targetUser.username %></h1>
+                <p class="muted">@<%= targetUser.username %> - stored resumes and latest score snapshots.</p>
+            </div>
+            <div class="pill-row">
+                <a href="/admin/users/<%= targetUser._id %>" class="btn-outline">Back to user</a>
+                <a href="/admin/users/<%= targetUser._id %>/resumes?<%= showArchived ? '' : 'archived=1' %>" class="btn-outline">
+                    <%= showArchived ? 'Show active resumes' : 'Show archived resumes' %>
+                </a>
+            </div>
+        </div>
+
+        <% if (resumes && resumes.length) { %>
+            <div class="resumes-grid profile-resume-grid" style="max-height:none; overflow:visible; padding-right:0;">
+                <% resumes.forEach((r) => { %>
+                    <article class="resume-card glass">
+                        <div class="resume-card__top">
+                            <div class="resume-card__meta">
+                                <h3 class="resume-title"><%= r.originalName %></h3>
+                                <p class="muted">Uploaded <%= r.uploadedAt ? new Date(r.uploadedAt).toLocaleString() : 'Unknown' %></p>
+                                <div class="pill-row" style="margin-top:10px;">
+                                    <span class="pill">Status: <%= r.archived ? 'Archived' : 'Active' %></span>
+                                    <span class="pill">Company: <%= r.fitCompany || 'n/a' %></span>
+                                </div>
+                            </div>
+                            <div class="score-ring profile-ring score-ring-lg" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore * 3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>; flex-shrink:0;">
+                                <div class="score-ring__fill"></div>
+                                <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                            </div>
+                        </div>
+
+                        <% if (r.fitSummary) { %>
+                            <p class="muted" style="margin-top:14px;"><%= r.fitSummary %></p>
+                        <% } %>
+
+                        <div class="resume-card__actions">
+                            <a href="/admin/users/<%= targetUser._id %>/resumes/<%= r._id %>" class="btn-outline">View full score</a>
+                            <a href="/admin/users/<%= targetUser._id %>/resumes/<%= r._id %>/preview" class="btn-outline" target="_blank">Preview resume</a>
+                        </div>
+                    </article>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <p class="muted" style="text-align:center; margin-top:30px;">No resumes found for this user.</p>
+        <% } %>
+    </section>
+
+    <%- include('partials/footer'); %>
+</body>
+</html>

@@ -1,3 +1,8 @@
+/**
+ * Interview frontend entry module.
+ * Inputs: DOM nodes, browser events, persisted local state, and interview API responses.
+ * Outputs: A fully wired interview UI with chat flow, modal setup, persistence, and inactivity handling.
+ */
 import { startInterview, askInterview, closeInterview, getTurnReview } from './api.js';
 import { createChatView } from './chatView.js';
 import { createContextModal } from './contextModal.js';
@@ -6,7 +11,6 @@ import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
 import { createTTS } from './tts.js';
 
-// ── Avatar, camera, subtitles & panels ──────────────────────
 const avatarContainer = document.getElementById('avatar-container');
 const cameraFeed = document.getElementById('camera-feed');
 const cameraPlaceholder = document.getElementById('camera-placeholder');
@@ -16,27 +20,28 @@ const chatPanel = document.getElementById('iv-chat-panel');
 const coachPanel = document.getElementById('iv-coach-panel');
 const toggleChatBtn = document.getElementById('iv-toggle-chat');
 const toggleCoachBtn = document.getElementById('iv-toggle-coach');
+const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
+const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+const muteBtn = document.getElementById('iv-toggle-mute');
 
-// Avatar talking state — driven by audio playback, not HTTP lifecycle
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
 };
 
-// TTS
 const tts = createTTS({
   onStart: () => setAvatarTalking(true),
-  onEnd:   () => setAvatarTalking(false),
+  onEnd: () => setAvatarTalking(false),
 });
 
-// Mute toggle button
-const muteBtn = document.getElementById('iv-toggle-mute');
 const syncMuteBtn = () => {
   if (!muteBtn) return;
   const muted = tts.isMuted();
   muteBtn.classList.toggle('is-active', !muted);
   muteBtn.title = muted ? 'Unmute Aria' : 'Mute Aria';
   const slash = muteBtn.querySelector('.mute-slash');
-  if (slash) slash.style.display = muted ? 'block' : 'none';
+  if (slash) {
+    slash.style.display = muted ? 'block' : 'none';
+  }
 };
 
 muteBtn?.addEventListener('click', () => {
@@ -46,14 +51,14 @@ muteBtn?.addEventListener('click', () => {
 
 syncMuteBtn();
 
-// SubtitleS
 let subtitleTimer = null;
+
 const setSubtitle = (text) => {
   if (!subtitleEl) return;
   clearTimeout(subtitleTimer);
   subtitleEl.classList.remove('is-visible');
   if (!text) return;
-  void subtitleEl.offsetHeight; // restart transition
+  void subtitleEl.offsetHeight;
   subtitleEl.textContent = text;
   subtitleEl.classList.add('is-visible');
 };
@@ -69,20 +74,25 @@ const setSubtitleThinking = () => {
 const clearSubtitle = () => {
   if (!subtitleEl) return;
   subtitleEl.classList.remove('is-visible');
-  subtitleTimer = setTimeout(() => { subtitleEl.textContent = ''; }, 400);
+  subtitleTimer = window.setTimeout(() => {
+    subtitleEl.textContent = '';
+  }, 400);
 };
 
-// Panel toggles
 const openPanel = (panel, btn) => {
-  [chatPanel, coachPanel].forEach((p) => {
-    if (p && p !== panel) {
-      p.classList.remove('is-open');
-      p.setAttribute('aria-hidden', 'true');
+  [chatPanel, coachPanel].forEach((candidate) => {
+    if (candidate && candidate !== panel) {
+      candidate.classList.remove('is-open');
+      candidate.setAttribute('aria-hidden', 'true');
     }
   });
-  [toggleChatBtn, toggleCoachBtn].forEach((b) => {
-    if (b && b !== btn) b.classList.remove('is-active');
+
+  [toggleChatBtn, toggleCoachBtn].forEach((candidate) => {
+    if (candidate && candidate !== btn) {
+      candidate.classList.remove('is-active');
+    }
   });
+
   if (!panel) return;
   const isOpen = panel.classList.contains('is-open');
   panel.classList.toggle('is-open', !isOpen);
@@ -105,10 +115,151 @@ document.getElementById('iv-coach-close')?.addEventListener('click', () => {
   toggleCoachBtn?.classList.remove('is-active');
 });
 
-// Added a camera toggle option
+const promptForEyeTracking = async () => {
+  if (!window.webgazer) {
+    return false;
+  }
+
+  const cachedChoice = sessionStorage.getItem('iv-eye-tracking-choice');
+  if (cachedChoice) {
+    return cachedChoice === 'yes';
+  }
+
+  const savedChoice = localStorage.getItem('iv-eye-tracking');
+  if (savedChoice === 'yes' || savedChoice === 'on') {
+    sessionStorage.setItem('iv-eye-tracking-choice', 'yes');
+    return true;
+  }
+  if (savedChoice === 'no' || savedChoice === 'off') {
+    sessionStorage.setItem('iv-eye-tracking-choice', 'no');
+    return false;
+  }
+
+  if (window.Swal?.fire) {
+    const result = await window.Swal.fire({
+      title: 'Track Eye Movement',
+      text: 'Would you like to track eye movement during your interview to receive feedback on your eye contact?',
+      showCancelButton: true,
+      showConfirmButton: true,
+      cancelButtonText: 'No',
+      confirmButtonText: 'Yes',
+      background: 'linear-gradient(180deg, rgba(20,23,32,0.96), rgba(15,15,16,0.98))',
+      color: '#dbeafe',
+      titleColor: '#93c5fd',
+      customClass: {
+        confirmButton: 'swal-btn-confirm',
+        cancelButton: 'swal-btn-cancel',
+      },
+      buttonsStyling: false,
+    });
+
+    sessionStorage.setItem('iv-eye-tracking-choice', result.isConfirmed ? 'yes' : 'no');
+    return result.isConfirmed;
+  }
+
+  const accepted = window.confirm(
+    'Track eye movement during your interview to receive feedback on your eye contact?'
+  );
+  sessionStorage.setItem('iv-eye-tracking-choice', accepted ? 'yes' : 'no');
+  return accepted;
+};
+
 let cameraStream = null;
 let cameraEnabled = localStorage.getItem('iv-camera') !== 'off';
-const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+let eyeTrackingEnabled = localStorage.getItem('iv-eye-tracking') !== 'off';
+let webgazerInitialized = false;
+let eyeContactTotal = 0;
+let eyeContactHits = 0;
+
+const setEyeTrackingState = (active, focused = null) => {
+  if (!eyeTrackingSpot) return;
+  eyeTrackingSpot.classList.toggle('is-active', active);
+  eyeTrackingSpot.classList.toggle('is-focused', focused === true);
+  eyeTrackingSpot.classList.toggle('is-missed', focused === false);
+};
+
+const isOverlap = (xPos, yPos) => {
+  const rect = eyeTrackingSpot?.getBoundingClientRect();
+  if (!rect) return false;
+  return xPos >= rect.left && xPos <= rect.right && yPos >= rect.top && yPos <= rect.bottom;
+};
+
+const updateEyeTrackingBadge = () => {
+  if (!stageLiveBadge) return;
+  if (!cameraStream) {
+    stageLiveBadge.removeAttribute('data-eye-score');
+    return;
+  }
+
+  if (!eyeTrackingEnabled || !eyeContactTotal) {
+    stageLiveBadge.removeAttribute('data-eye-score');
+    return;
+  }
+
+  stageLiveBadge.setAttribute('data-eye-score', `${Math.round((eyeContactHits / eyeContactTotal) * 100)}% eye`);
+};
+
+const pauseEyeTracking = () => {
+  setEyeTrackingState(false);
+  if (!window.webgazer || !webgazerInitialized) {
+    updateEyeTrackingBadge();
+    return;
+  }
+
+  try {
+    window.webgazer.pause();
+  } catch {
+    // no-op
+  }
+
+  updateEyeTrackingBadge();
+};
+
+const startEyeTracking = async () => {
+  if (!window.webgazer || !eyeTrackingEnabled) {
+    return;
+  }
+
+  try {
+    if (!webgazerInitialized) {
+      window.webgazer.params.faceMeshBasePath = '/mediapipe/face_mesh/';
+      await window.webgazer
+        .setRegression('ridge')
+        .setGazeListener((data) => {
+          if (!data || !cameraStream) return;
+
+          eyeContactTotal += 1;
+          const focused = isOverlap(data.x, data.y);
+          if (focused) {
+            eyeContactHits += 1;
+          }
+          setEyeTrackingState(true, focused);
+          updateEyeTrackingBadge();
+        })
+        .saveDataAcrossSessions(true)
+        .begin();
+
+      window.webgazer
+        .showVideoPreview(false)
+        .showPredictionPoints(false)
+        .applyKalmanFilter(true)
+        .showFaceOverlay(false)
+        .showFaceFeedbackBox(false);
+
+      webgazerInitialized = true;
+    } else {
+      await window.webgazer.resume();
+    }
+
+    setEyeTrackingState(true);
+  } catch (error) {
+    console.warn('Eye tracking failed to start:', error);
+    eyeTrackingEnabled = false;
+    localStorage.setItem('iv-eye-tracking', 'off');
+    setEyeTrackingState(false);
+    updateEyeTrackingBadge();
+  }
+};
 
 const setCameraUI = (on) => {
   if (cameraFeed) cameraFeed.classList.toggle('hidden', !on);
@@ -117,25 +268,48 @@ const setCameraUI = (on) => {
   if (cameraToggleBtn) {
     cameraToggleBtn.classList.toggle('is-active', on);
     cameraToggleBtn.title = on ? 'Turn camera off' : 'Turn camera on';
-    const icon = cameraToggleBtn.querySelector('.cam-btn-icon');
-    if (icon) icon.setAttribute('data-off', on ? '' : 'true');
   }
+  if (!on) {
+    setEyeTrackingState(false);
+  }
+  updateEyeTrackingBadge();
 };
 
 const stopCamera = () => {
-  cameraStream?.getTracks().forEach((t) => t.stop());
+  cameraStream?.getTracks().forEach((track) => track.stop());
   cameraStream = null;
-  if (cameraFeed) cameraFeed.srcObject = null;
+  if (cameraFeed) {
+    cameraFeed.srcObject = null;
+  }
+  pauseEyeTracking();
   setCameraUI(false);
 };
 
 const startCamera = async () => {
-  if (!navigator.mediaDevices?.getUserMedia) { setCameraUI(false); return; }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setCameraUI(false);
+    return;
+  }
+
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    if (cameraFeed) cameraFeed.srcObject = cameraStream;
+    if (cameraFeed) {
+      cameraFeed.srcObject = cameraStream;
+    }
     setCameraUI(true);
-  } catch {
+
+    const shouldTrackEyes = await promptForEyeTracking();
+    eyeTrackingEnabled = shouldTrackEyes;
+    localStorage.setItem('iv-eye-tracking', shouldTrackEyes ? 'on' : 'off');
+
+    if (shouldTrackEyes) {
+      await startEyeTracking();
+    } else {
+      setEyeTrackingState(false);
+      updateEyeTrackingBadge();
+    }
+  } catch (error) {
+    console.warn('Camera failed to start:', error);
     setCameraUI(false);
   }
 };
@@ -143,10 +317,29 @@ const startCamera = async () => {
 cameraToggleBtn?.addEventListener('click', async () => {
   cameraEnabled = !cameraEnabled;
   localStorage.setItem('iv-camera', cameraEnabled ? 'on' : 'off');
-  if (cameraEnabled) { await startCamera(); } else { stopCamera(); }
+  if (cameraEnabled) {
+    await startCamera();
+  } else {
+    stopCamera();
+  }
 });
 
-if (cameraEnabled) { startCamera(); } else { setCameraUI(false); }
+if (cameraEnabled) {
+  void startCamera();
+} else {
+  setCameraUI(false);
+}
+
+window.addEventListener('beforeunload', () => {
+  stopCamera();
+  if (window.webgazer && webgazerInitialized) {
+    try {
+      window.webgazer.end();
+    } catch {
+      // no-op
+    }
+  }
+});
 
 const elements = {
   chatLog: document.getElementById('chat-log'),
@@ -155,7 +348,6 @@ const elements = {
   statusDot: document.getElementById('ai-status'),
   setupBtn: document.getElementById('setup-btn'),
   contextBtn: document.getElementById('context-btn'),
-  // cameraBtn: document.getElementById('camera-btn'),
   endBtn: document.getElementById('end-btn'),
   sendBtn: document.getElementById('send-btn'),
   micBtn: document.getElementById('mic-btn'),
@@ -259,10 +451,14 @@ const addUserMessage = (content, turnNumber) => {
   return bubble;
 };
 
-const addAssistantMessage = (content) => {
+const addAssistantMessage = (content, options = {}) => {
   chatView.addMessage('assistant', content);
-  setSubtitle(content);
-  void tts.play(content);
+  if (options.subtitle !== false) {
+    setSubtitle(content);
+  }
+  if (options.speak !== false) {
+    void tts.play(content);
+  }
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -296,13 +492,15 @@ const watchTurnAnalysis = async ({ chatId, turnNumber, answer, bubble }) => {
 const setThinking = (thinking) => {
   chatView.setStatus(thinking ? 'Thinking...' : 'Ready', thinking);
   if (thinking) {
-    tts.stop(); // cancel any prior audio so mouth stops before new response
+    tts.stop();
     setSubtitleThinking();
   }
 };
 
 const resetChat = () => {
   clearInactivityTimer();
+  tts.stop();
+  clearSubtitle();
   chatView.clearMessages();
   replaceState(state, createInitialState());
   state.context = createEmptyContext();
@@ -334,8 +532,15 @@ const hydrate = () => {
       addUserMessage(message.content, turnNumber);
       return;
     }
-    addAssistantMessage(message.content);
+
+    addAssistantMessage(message.content, { speak: false, subtitle: false });
   });
+
+  const latestAssistantMessage = [...state.history].reverse().find((message) => message.role === 'assistant');
+  if (latestAssistantMessage) {
+    setSubtitle(latestAssistantMessage.content);
+  }
+
   contextModal.populate(state.context);
   contextModal.setMode('view');
   chatView.setInterviewComplete(state.interviewComplete);
@@ -383,12 +588,14 @@ const expireInterviewForInactivity = async () => {
     clearInactivityTimer();
     return;
   }
-  await completeInterview('Interview closed after 30 minutes of inactivity. Start a new session when you are ready to continue practicing.');
+  await completeInterview(
+    'Interview closed after 30 minutes of inactivity. Start a new session when you are ready to continue practicing.'
+  );
 };
 
 elements.form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  tts.warmUp(); // unlock AudioContext while we're still inside the user gesture
+  tts.warmUp();
   const prompt = (elements.promptInput.value || '').trim();
   if (!prompt) {
     return;
@@ -460,7 +667,7 @@ elements.form.addEventListener('submit', async (event) => {
 
 contextModal.contextForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  tts.warmUp(); // unlock AudioContext on the opening user gesture
+  tts.warmUp();
 
   state.context = contextModal.read();
   state.contextSet = !!(state.context.company && state.context.role && state.context.resumeId);
@@ -518,123 +725,6 @@ elements.setupBtn.addEventListener('click', () => {
   contextModal.setMode('view');
   contextModal.open();
 });
-
-// const videoFeedEl = document.getElementById('video-feed');
-// const smileyFace = document.getElementById('smiley-face');
-// const cameraContainer = document.querySelector('.camera-container');
-// const webgazer = window.webgazer;
-
-// let webgazerInitialized = false;
-// let total = 0;
-// let count = 0;
-
-// // Turns the camera on and begins eye detection
-// async function startCamera() {
-//   console.log('Starting camera');
-
-//   // Set the video's stream to the user's camera
-//   const stream = await navigator.mediaDevices.getUserMedia({
-//     video: true,
-//     audio: false
-//   });
-
-//   videoFeedEl.srcObject = stream;
-//   cameraContainer.classList.add('active');
-
-//   // Initialize webgazer (first time turning on the camera)
-//   if (!webgazerInitialized) {
-//     console.log('Initializing webgazer');
-
-//     webgazer.params.faceMeshBasePath = "/mediapipe/face_mesh/";
-//     webgazer.setGazeListener((data, elapsedTime) => {
-//       if (!data) { return; } // data.x = x-coordinates and data.y = y-coordinates
-
-//       // If the eye tracker is on the interviewer
-//       if (isOverlap(data.x, data.y)) { count++; }
-//       total++;
-//     }).begin();
-
-//     webgazer.showVideo(false);
-//     webgazer.showFaceOverlay(false);
-//     webgazer.showFaceFeedbackBox(false);
-
-//     webgazerInitialized = true;
-//   }
-//   else {
-//     // Resume webgazer (not first time turning on the camera)
-//     webgazer.resume();
-//   }
-// }
-
-// // Turns the camera video tracks off and pauses eye tracking
-// function stopCamera() {
-//   console.log('Stopping Camera');
-
-//   // If there are no video tracks
-//   if (!videoFeedEl.srcObject) { return; }
-//   else {
-//     // Remove the track from the stream and set the video's source to null
-//     videoFeedEl.srcObject.getTracks().forEach(track => track.stop());
-//     videoFeedEl.srcObject = null;
-//     cameraContainer.classList.remove('active');
-
-//     // Pause the webgazer and calculate eye contact %
-//     webgazer.pause();
-//     console.log('accuracy: ' + (count / total) * 100 + '%');
-//     count = 0;
-//     total = 0;
-//   }
-// }
-
-// // Checks whether the eye tracker is on the interviewer
-// function isOverlap(xPos, yPos) {
-//   const rect = smileyFace.getBoundingClientRect();
-//   return (
-//     xPos >= rect.left &&
-//     xPos <= rect.right &&
-//     yPos >= rect.top &&
-//     yPos <= rect.bottom
-//   );
-// }
-
-// // Toggles the camera
-// elements.cameraBtn.addEventListener('click', () => {
-//   if (videoFeedEl.srcObject) { stopCamera(); }
-//   else { startCamera(); }
-// });
-
-
-
-
-
-
-
-const calibrateContainer = document.querySelector('.calibrate-container');
-const calibrateBtn = document.querySelectorAll('.calibrate-btn');
-let isOpen = false;
-
-// Toggles the calibration screen
-calibrateBtn.forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (!isOpen) {
-      calibrateContainer.classList.add('active');
-      isOpen = true;
-    }
-    else {
-      calibrateContainer.classList.remove('active');
-      isOpen = false;
-    }
-  })
-})
-
-
-
-
-
-
-
-
-
 
 elements.endBtn.addEventListener('click', async () => {
   await completeInterview('Interview marked complete. Thanks for practicing!');

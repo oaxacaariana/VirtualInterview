@@ -1,3 +1,8 @@
+/**
+ * Interview frontend API client.
+ * Inputs: Interview payloads, chat ids, and turn numbers from the browser state layer.
+ * Outputs: Parsed JSON responses from the interview-related backend endpoints.
+ */
 const parseJsonResponse = async (response) => {
   const text = await response.text();
   let data;

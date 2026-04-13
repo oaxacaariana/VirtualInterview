@@ -1,3 +1,8 @@
+/**
+ * Interview context modal module.
+ * Inputs: DOM element references plus resume/context state for setup form interactions.
+ * Outputs: Modal open/close behavior and normalized context values read from the UI.
+ */
 export const createContextModal = (elements) => {
   const {
     contextModal,

@@ -1,3 +1,8 @@
+/**
+ * Voice input helper module.
+ * Inputs: DOM controls for microphone state and the prompt input field.
+ * Outputs: Browser speech-recognition wiring that appends dictated text into the prompt box.
+ */
 export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -11,10 +16,9 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
   recognition.interimResults = true;
   recognition.continuous = true;
 
-  // the reason it would stop at whenever you pasued was that dictBuffer captures only a single event snapshot dropped all the earlier chunks
   let listening = false;
-  let baseText = '';       // whatever was in the textarea when mic started
-  let finalizedText = '';  // all finalized segments appeneded in this session
+  let baseText = '';
+  let finalizedText = '';
 
   recognition.onstart = () => {
     listening = true;
@@ -27,11 +31,10 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
     listening = false;
     micBtn.classList.remove('active');
     micBtn.classList.add('outline');
-    // Add terminal punctuation if the session produced speech
     if (finalizedText.trim()) {
-      const current = promptInput.value.trim();
-      if (current && !/[.!?]$/.test(current)) {
-        promptInput.value = `${current}.`;
+      const trimmed = promptInput.value.trim();
+      if (trimmed && !/[.!?]$/.test(trimmed)) {
+        promptInput.value = `${trimmed}.`;
       }
     }
     finalizedText = '';
@@ -59,7 +62,6 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
       }
     }
 
-    // Rebuild value: pre-existing text + everything finalized + current interim
     promptInput.value = `${baseText} ${finalizedText}${interimText}`.trim();
   };
 
@@ -68,6 +70,7 @@ export const createVoiceInput = ({ micBtn, micStatus, promptInput }) => {
       recognition.stop();
       return;
     }
+
     baseText = promptInput.value;
     finalizedText = '';
     recognition.start();

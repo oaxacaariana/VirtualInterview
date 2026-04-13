@@ -1,23 +1,17 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>AI-Powered Mock Interviewer | Virtual Interview Simulator</title>
-    <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="/stylesheets/styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/styles/app.css">
     <script src="/scripts/eye-tracking/webgazer.js" type="text/javascript"></script>
     <script src="/scripts/eye-tracking/face-api.min.js"></script>
 </head>
-
 <body>
-    <canvas id="plotting_canvas" width="500" height="500"></canvas>
-    <div id="eye-tracking-spot"></div>
     <%- include('partials/navbar'); %>
+
     <div class="iv-shell">
         <div class="iv-stage">
-
-            <!-- Aria SVG - basically movable shapes with pure css with animations in openai.css-->
             <div class="iv-aria-bg" id="avatar-container">
                 <svg class="avatar-svg" viewBox="0 0 320 300" preserveAspectRatio="xMidYTop meet" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -33,7 +27,6 @@
                             <stop offset="0%" stop-color="#18263e"/>
                             <stop offset="100%" stop-color="#0c1526"/>
                         </radialGradient>
-                        <!-- makes the eyes glow blue idk i thought it was cool-->
                         <filter id="av-eye-glow" x="-60%" y="-60%" width="220%" height="220%">
                             <feGaussianBlur stdDeviation="2" result="blur"/>
                             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -48,80 +41,51 @@
                         </filter>
                     </defs>
 
-                    <!-- Room background -->
                     <rect width="320" height="300" fill="#060c18"/>
-                    <!-- Ambient glow behind figure -->
                     <ellipse cx="160" cy="130" rx="110" ry="120" fill="url(#av-bg-glow)"/>
-                    <!-- Shoulder ambient fill -->
                     <ellipse cx="160" cy="210" rx="60" ry="30" fill="#0d1e40" filter="url(#av-ambient)" opacity="0.5"/>
-
-                    <!-- Torso / suit -->
                     <path d="M0 300 C0 252 55 228 114 218 L160 232 L206 218 C265 228 320 252 320 300 Z" fill="#060c18"/>
                     <path d="M68 300 C70 265 92 244 116 236 L150 252 L160 232 L170 252 L204 236 C228 244 250 265 252 300 Z" fill="url(#av-suit-grad)" stroke="#1e3a6e" stroke-width="0.8" stroke-opacity="0.5"/>
-                    <!-- the folded things on the suit -->
                     <path d="M150 252 L128 292 L160 272 Z" fill="#0a1428" stroke="#1e3a6e" stroke-width="0.6" stroke-opacity="0.6"/>
                     <path d="M170 252 L192 292 L160 272 Z" fill="#0a1428" stroke="#1e3a6e" stroke-width="0.6" stroke-opacity="0.6"/>
-                    <!-- Shirt collar -->
                     <path d="M148 236 L141 258 L160 248 L179 258 L172 236" fill="#0e1e38" stroke="#2a4a8a" stroke-width="0.8" stroke-opacity="0.7"/>
-                    <!-- Tie -->
                     <path d="M155 248 L151 278 L160 286 L169 278 L165 248 Z" fill="#0f2060" stroke="#2358f5" stroke-width="0.8" stroke-opacity="0.7"/>
                     <path d="M155 248 L160 256 L165 248 Z" fill="#1a3080"/>
-                    <!-- edge -->
                     <rect x="0" y="290" width="320" height="10" fill="#07101e"/>
                     <line x1="0" y1="290" x2="320" y2="290" stroke="#1a2a4a" stroke-width="0.8" opacity="0.6"/>
-
-                    <!-- Neck -->
                     <rect x="148" y="218" width="24" height="20" rx="8" fill="#0f1a2e"/>
-
-                    <!-- Head -->
                     <ellipse cx="160" cy="158" rx="58" ry="64" fill="url(#av-head-grad)" stroke="#2358f5" stroke-width="1" stroke-opacity="0.35" filter="url(#av-head-glow)"/>
-
-                    <!-- Hair -->
                     <path d="M104 148 C106 106 128 84 160 82 C192 84 214 106 216 148 L214 130 C212 92 190 72 160 70 C130 72 108 92 106 130 Z" fill="#060c1c"/>
                     <path d="M104 145 C102 158 102 172 106 184 L108 149 Z" fill="#060c1c"/>
                     <path d="M216 145 C218 158 218 172 214 184 L212 149 Z" fill="#060c1c"/>
-
-                    <!-- Ears -->
                     <ellipse cx="104" cy="165" rx="7" ry="11" fill="#0f1a2e" stroke="#1e3a6e" stroke-width="0.7" stroke-opacity="0.5"/>
                     <ellipse cx="216" cy="165" rx="7" ry="11" fill="#0f1a2e" stroke="#1e3a6e" stroke-width="0.7" stroke-opacity="0.5"/>
-
-                    <!-- Eyebrows -->
                     <path d="M126 136 Q136 131 146 134" stroke="#3a5a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
                     <path d="M174 134 Q184 131 194 136" stroke="#3a5a8a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-                    <!-- Left eye -->
                     <ellipse cx="136" cy="155" rx="11" ry="12" fill="#080e1e"/>
                     <ellipse class="av-iris" cx="136" cy="155" rx="8" ry="8.5" fill="#2358f5" opacity="0.9" filter="url(#av-eye-glow)"/>
                     <ellipse cx="136" cy="155" rx="5" ry="5.5" fill="#04080e"/>
                     <ellipse cx="133" cy="152" rx="2.5" ry="2" fill="rgba(255,255,255,0.75)"/>
                     <ellipse class="av-eyelid" cx="136" cy="155" rx="11" ry="12" fill="#0f1a2e"/>
-
-                    <!-- Right eye -->
                     <ellipse cx="184" cy="155" rx="11" ry="12" fill="#080e1e"/>
                     <ellipse class="av-iris" cx="184" cy="155" rx="8" ry="8.5" fill="#2358f5" opacity="0.9" filter="url(#av-eye-glow)"/>
                     <ellipse cx="184" cy="155" rx="5" ry="5.5" fill="#04080e"/>
                     <ellipse cx="181" cy="152" rx="2.5" ry="2" fill="rgba(255,255,255,0.75)"/>
                     <ellipse class="av-eyelid" cx="184" cy="155" rx="11" ry="12" fill="#0f1a2e"/>
-
-                    <!-- Nose -->
                     <path d="M156 162 L152 181 Q160 186 168 181 L164 162" stroke="#2a4a7a" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-
-                    <!-- Mouth rest -->
                     <path class="av-mouth-rest" d="M146 198 Q160 207 174 198" stroke="#4a7aaa" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <!-- Mouth talking -->
                     <path class="av-mouth-talk" d="M146 198 Q160 211 174 198 Q160 205 146 198 Z" stroke="#4a7aaa" stroke-width="1.5" fill="#080e1e" stroke-linecap="round" opacity="0"/>
                 </svg>
 
-                <!-- name tag idk i choose aria but we can change this-->
                 <div class="iv-aria-nametag">
                     <span class="iv-aria-name">Aria</span>
                     <span class="stage-badge">Hiring Manager</span>
                 </div>
 
                 <div class="av-talk-ring"></div>
+                <div id="eye-tracking-spot" aria-hidden="true"></div>
             </div>
 
-            <!-- User camera in the bottom right -->
             <div class="iv-pip">
                 <video id="camera-feed" autoplay playsinline muted></video>
                 <div id="camera-placeholder" class="camera-placeholder hidden">
@@ -139,21 +103,18 @@
                 </div>
                 <div class="iv-pip-label">
                     <span class="iv-pip-name">You</span>
-                    <!-- the live button.. i need to make this toggle-->
                     <span class="stage-live" id="stage-live-badge"></span>
                 </div>
             </div>
 
-            <!-- Top toolbar overlay -->
             <div class="iv-topbar">
                 <div class="iv-topbar-left">
-                    <span id="ai-status" class="status-dot">Ready</span> <!-- shows ready or thinking based on the AI status-->
+                    <span id="ai-status" class="status-dot">Ready</span>
                 </div>
                 <div class="iv-topbar-center">
                     <p class="eyebrow" style="color:#4a7aaa; font-size:0.7rem; letter-spacing:0.1em; margin:0 0 1px;">Simulated interview</p>
                     <span style="font-weight:600; color:#dbeafe; font-size:0.88rem;">AI-Powered Mock Interviewer</span>
                 </div>
-                <!-- Setup opens the setup modal, Logs goes to your history, New chat resets -->-->
                 <div class="iv-topbar-right">
                     <button type="button" id="setup-btn" class="iv-toolbar-btn">Setup</button>
                     <a href="/openai/logs" class="iv-toolbar-btn">Logs</a>
@@ -161,24 +122,21 @@
                 </div>
             </div>
 
-            <!-- AIs messages-->
             <div class="iv-subtitles-bar">
                 <p id="iv-subtitle-text" class="iv-subtitle-text"></p>
             </div>
 
-            <!-- Chat transcript -->
             <aside class="iv-side-panel" id="iv-chat-panel" aria-hidden="true">
                 <div class="iv-panel-head">
                     <div>
                         <p class="eyebrow" style="margin-bottom:2px;">Transcript</p>
                         <h3 style="margin:0; font-size:1.05rem;">Chat history</h3>
                     </div>
-                    <button class="iv-panel-close" id="iv-chat-close" aria-label="Close">✕</button>
+                    <button class="iv-panel-close" id="iv-chat-close" aria-label="Close">X</button>
                 </div>
                 <div id="chat-log" class="chat-log" style="min-height:120px; flex:1; overflow-y:auto; max-height:none;"></div>
             </aside>
 
-            <!-- Coach -->
             <aside class="iv-side-panel iv-coach-side" id="iv-coach-panel" aria-hidden="true">
                 <div class="iv-panel-head">
                     <div>
@@ -188,7 +146,7 @@
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button type="button" id="analysis-privacy-btn" class="pill-btn" style="font-size:0.75rem; padding:4px 10px;">Blur coach</button>
                         <span class="review-badge">Live</span>
-                        <button class="iv-panel-close" id="iv-coach-close" aria-label="Close">✕</button>
+                        <button class="iv-panel-close" id="iv-coach-close" aria-label="Close">X</button>
                     </div>
                 </div>
                 <div class="iv-panel-scroll">
@@ -205,28 +163,23 @@
                     </div>
                 </div>
             </aside>
-
-        </div><!-- /.iv-stage -->
+        </div>
 
         <div class="iv-controls-bar">
             <div class="iv-ctrl-left">
                 <button type="button" id="mic-btn" class="btn-primary outline">Voice</button>
                 <button type="button" id="iv-toggle-mute" class="iv-icon-btn is-active" title="Mute Aria">
                     <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
-                        <!-- speaker -->
                         <path d="M3 7h3l4-4v14l-4-4H3V7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
                         <path d="M14 7a4 4 0 0 1 0 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-                        <!-- slash shown when muted -->
                         <line class="mute-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="display:none"/>
                     </svg>
                     Audio
                 </button>
                 <button type="button" id="iv-toggle-camera" class="iv-icon-btn is-active" title="Turn camera off">
-                    <!-- camera-on icon -->
                     <svg class="cam-btn-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
                         <rect x="1" y="5" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/>
                         <path d="M13 9l5-3v8l-5-3V9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                        <!-- slash shown when off -->
                         <line class="cam-off-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                     </svg>
                     Camera
@@ -256,7 +209,6 @@
                 <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End</button>
             </div>
         </div>
-
     </div>
 
     <div id="context-modal" class="modal hidden">
@@ -267,114 +219,102 @@
                     <h3 id="context-modal-title">Create new chat</h3>
                     <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and launch.</p>
                 </div>
-                <form id="context-form">
-                    <div class="setup-grid">
-                        <div class="setup-column">
-                            <div class="setup-card">
-                                <label>Target company</label>
-                                <input type="text" id="ctx-company" maxlength="200" placeholder="Company name">
-
-                                <label>Target role / title</label>
-                                <input type="text" id="ctx-role" maxlength="200"
-                                    placeholder="e.g., Senior Backend Engineer">
-
-                                <div class="setup-switches">
-                                    <label class="switch-row">
-                                        <span>
-                                            <strong>Web research</strong>
-                                            <small class="muted">Pull external context before the interview
-                                                starts.</small>
-                                        </span>
-                                        <span class="switch">
-                                            <input type="checkbox" id="ctx-web-search" checked>
-                                            <span class="switch-ui"></span>
-                                        </span>
-                                    </label>
-
-                                    <label class="switch-row">
-                                        <span>
-                                            <strong>Crazy mode</strong>
-                                            <small class="muted">Playful, parody-heavy interviewer tone.</small>
-                                        </span>
-                                        <span class="switch">
-                                            <input type="checkbox" id="ctx-silly">
-                                            <span class="switch-ui"></span>
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <div id="custom-tone-block" class="hidden">
-                                    <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
-                                    <textarea id="ctx-custom-tone" rows="2" maxlength="200"
-                                        placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;"
-                                        disabled></textarea>
-                                </div>
-                            </div>
-
-                            <div class="setup-card">
-                                <div class="slider-stack">
-                                    <label for="ctx-seriousness">Seriousness <span id="seriousness-val"
-                                            class="slider-val"></span></label>
-                                    <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
-
-                                    <label for="ctx-style">Professionalism style <span id="style-val"
-                                            class="slider-val"></span></label>
-                                    <input type="range" id="ctx-style" min="0" max="1" step="0.01" value="0.5">
-
-                                    <label for="ctx-difficulty">Difficulty <span id="difficulty-val"
-                                            class="slider-val"></span></label>
-                                    <input type="range" id="ctx-difficulty" min="0" max="1" step="0.01" value="0.5">
-
-                                    <label for="ctx-complexity">Complexity <span id="complexity-val"
-                                            class="slider-val"></span></label>
-                                    <input type="range" id="ctx-complexity" min="0" max="1" step="0.01" value="0.5">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="setup-column">
-                            <div class="setup-card">
-                                <div class="setup-card__head">
-                                    <div>
-                                        <p class="eyebrow">Resume source</p>
-                                        <h4>Select resume</h4>
-                                    </div>
-                                    <p class="muted">Used for interview context and grading.</p>
-                                </div>
-                                <div class="resume-card-grid">
-                                    <% (resumes || []).forEach(function(r) { %>
-                                        <div class="resume-card" data-resume-id="<%= r._id %>">
-                                            <div class="resume-card__top">
-                                                <h4>
-                                                    <%= r.originalName %>
-                                                </h4>
-                                                <div class="score-ring profile-ring"
-                                                    style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
-                                                    <div class="score-ring__fill"></div>
-                                                    <div class="score-ring__center">
-                                                        <%= typeof r.fitScore==='number' ? r.fitScore : '-' %>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <p class="muted">Tap to select</p>
-                                        </div>
-                                        <% }); %>
-                                </div>
-                                <input type="hidden" id="ctx-resume" value="">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" id="context-submit" class="btn-primary">Create new chat</button>
-                    </div>
-                </form>
+                <button id="close-modal" class="btn-primary modal-close-btn">Close</button>
             </div>
+            <form id="context-form">
+                <div class="setup-grid">
+                    <div class="setup-column">
+                        <div class="setup-card">
+                            <label>Target company</label>
+                            <input type="text" id="ctx-company" maxlength="200" placeholder="Company name">
+
+                            <label>Target role / title</label>
+                            <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
+
+                            <div class="setup-switches">
+                                <label class="switch-row">
+                                    <span>
+                                        <strong>Web research</strong>
+                                        <small class="muted">Pull external context before the interview starts.</small>
+                                    </span>
+                                    <span class="switch">
+                                        <input type="checkbox" id="ctx-web-search" checked>
+                                        <span class="switch-ui"></span>
+                                    </span>
+                                </label>
+
+                                <label class="switch-row">
+                                    <span>
+                                        <strong>Crazy mode</strong>
+                                        <small class="muted">Playful, parody-heavy interviewer tone.</small>
+                                    </span>
+                                    <span class="switch">
+                                        <input type="checkbox" id="ctx-silly">
+                                        <span class="switch-ui"></span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div id="custom-tone-block" class="hidden">
+                                <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
+                                <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                            </div>
+                        </div>
+
+                        <div class="setup-card">
+                            <div class="slider-stack">
+                                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-style">Professionalism style <span id="style-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-style" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-difficulty">Difficulty <span id="difficulty-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-difficulty" min="0" max="1" step="0.01" value="0.5">
+
+                                <label for="ctx-complexity">Complexity <span id="complexity-val" class="slider-val"></span></label>
+                                <input type="range" id="ctx-complexity" min="0" max="1" step="0.01" value="0.5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-column">
+                        <div class="setup-card">
+                            <div class="setup-card__head">
+                                <div>
+                                    <p class="eyebrow">Resume source</p>
+                                    <h4>Select resume</h4>
+                                </div>
+                                <p class="muted">Used for interview context and grading.</p>
+                            </div>
+                            <div class="resume-card-grid">
+                                <% (resumes || []).forEach(function(r) { %>
+                                  <div class="resume-card" data-resume-id="<%= r._id %>">
+                                    <div class="resume-card__top">
+                                      <h4><%= r.originalName %></h4>
+                                      <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
+                                        <div class="score-ring__fill"></div>
+                                        <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                                      </div>
+                                    </div>
+                                    <p class="muted">Tap to select</p>
+                                  </div>
+                                <% }); %>
+                            </div>
+                            <input type="hidden" id="ctx-resume" value="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" id="context-submit" class="btn-primary">Create new chat</button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <script type="module" src="/scripts/openai/index.js"></script>
-        <script src="/scripts/eye-tracking/calibration.js"></script>
+    <script type="module" src="/scripts/openai/index.js"></script>
 
-        <%- include('partials/footer'); %>
+    <%- include('partials/footer'); %>
 </body>
-
 </html>
