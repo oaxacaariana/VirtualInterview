@@ -6,44 +6,50 @@
     <link rel="stylesheet" href="/styles/app.css">
 </head>
 <body>
-
 <%- include('partials/navbar'); %>
 
-<section class="upload-page">
-    <div class="section-shell upload-shell">
-        <div class="upload-intro glass">
+<div class="pg-hero">
+    <div class="pg-orb pg-orb--blue"></div>
+    <div class="pg-orb pg-orb--purple"></div>
+    <div class="section-shell pg-hero__inner">
+        <div>
             <p class="eyebrow">Resume scoring lab</p>
-            <h1>Pressure-test the resume before the interview starts.</h1>
-            <p>
-                Upload your PDF or DOCX, paste the real job description, and get a maximum-strictness score with optional company web research layered in.
-            </p>
+            <h1 class="pg-hero__title">Pressure-test the resume<br>before the interview starts.</h1>
+            <p class="pg-hero__sub">Upload your PDF or DOCX, paste a real job description, and get a maximum-strictness score with optional company research layered in.</p>
+        </div>
+    </div>
+</div>
 
+<section class="pg-body">
+    <div class="section-shell upload-shell">
+
+        <aside class="upload-intro">
             <div class="upload-feature-list">
                 <div class="upload-feature glass">
                     <strong>Role-fit breakdown</strong>
-                    <span>Get a score based on evidence, impact, completeness, and project depth.</span>
+                    <span>Score based on evidence, impact, completeness, and project depth.</span>
                 </div>
                 <div class="upload-feature glass">
                     <strong>Maximum strictness</strong>
-                    <span>Every score now uses the harshest evidence-based hiring bar by default.</span>
+                    <span>Every score uses the harshest evidence-based hiring bar by default.</span>
                 </div>
                 <div class="upload-feature glass">
                     <strong>Optional web context</strong>
-                    <span>Use company and role context when you want a more situational evaluation.</span>
+                    <span>Add company and role context for a more situational evaluation.</span>
                 </div>
             </div>
-        </div>
+        </aside>
 
         <div class="upload-form-wrap">
-            <div class="form-container upload-form-card">
-                <p class="eyebrow">Resume input</p>
-                <h2>Upload and score</h2>
-                <p class="form-subtext">
-                    Keep the job description specific. The tighter the target, the more useful the score becomes.
-                </p>
+            <div class="glass upload-form-card">
+                <div style="margin-bottom: 8px;">
+                    <p class="eyebrow">Resume input</p>
+                    <h2 style="margin: 4px 0 6px; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;">Upload and score</h2>
+                    <p style="color: var(--text-subtle); font-size: 0.92rem; margin: 0;">Keep the job description specific — the tighter the target, the more useful the score.</p>
+                </div>
 
                 <form action="/upload" method="POST" enctype="multipart/form-data">
-                    <label>Upload Resume (PDF or DOCX)</label>
+                    <label>Resume (PDF or DOCX)</label>
                     <input type="file" name="resume" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
 
                     <label>Company Name</label>
@@ -58,9 +64,8 @@
                                 <p class="eyebrow">Scoring controls</p>
                                 <h4>Strict scoring defaults</h4>
                             </div>
-                            <p class="muted">Resume scoring now always runs at the most skeptical setting.</p>
+                            <p class="muted">Resume scoring runs at the most skeptical setting by default.</p>
                         </div>
-
                         <div class="setup-switches">
                             <label class="switch-row">
                                 <span>
@@ -75,8 +80,8 @@
                         </div>
                     </div>
 
-                    <button id="upload-submit" type="submit" class="btn-primary full-width">
-                        Upload Resume
+                    <button id="upload-submit" type="submit" class="btn-primary full-width lp-btn-glow" style="margin-top: 8px;">
+                        Score Resume
                     </button>
                 </form>
             </div>
@@ -93,7 +98,6 @@
     const uploadForm = document.querySelector('form');
     const overlay = document.getElementById('loading-overlay');
     const submitBtn = document.getElementById('upload-submit');
-
     uploadForm.addEventListener('submit', () => {
         overlay.classList.remove('hidden');
         submitBtn.disabled = true;

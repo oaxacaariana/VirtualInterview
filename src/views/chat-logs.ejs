@@ -2,23 +2,28 @@
 <html>
 <head>
     <title>Chat Logs | Virtual Interview</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%233a7bfd'/%3E%3Cstop offset='1' stop-color='%236b5bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230f0f10'/%3E%3Cpath d='M18 42l10-20 8 12 10-8' stroke='url(%23g)' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='18' r='4' fill='%236b5bff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="/styles/app.css">
 </head>
 <body>
-    <%- include('partials/navbar'); %>
+<%- include('partials/navbar'); %>
 
-    <section class="results-section" style="text-align:left;">
-        <div class="results-hero" style="align-items:flex-start;">
-            <div>
-                <p class="eyebrow">Interview archive</p>
-                <h1 style="margin:2px 0 6px;">Chat logs</h1>
-                <p class="muted">Recent mock interviews with the saved setup and completion status.</p>
-            </div>
-            <div class="pill-row">
-                <a href="/openai" class="btn-primary">Back to interview</a>
-            </div>
+<div class="pg-hero">
+    <div class="pg-orb pg-orb--purple"></div>
+    <div class="section-shell pg-hero__inner">
+        <div>
+            <p class="eyebrow">Interview archive</p>
+            <h1 class="pg-hero__title">Chat logs</h1>
+            <p class="pg-hero__sub">Recent mock interviews with saved setup, grades, and completion status.</p>
         </div>
+        <div class="hero-cta-row">
+            <a href="/openai" class="btn-primary lp-btn-glow">New interview</a>
+        </div>
+    </div>
+</div>
 
+<section class="pg-body">
+    <div class="section-shell">
         <% if (chats && chats.length) { %>
             <div class="resumes-grid">
                 <% chats.forEach(chat => { %>
@@ -26,35 +31,21 @@
                         const rawScore = chat.finalScore?.overallScore;
                         const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
                         const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
-                        const ringColor = score === null
-                          ? '#555'
-                          : score >= 80 ? '#2dd4bf'
-                          : score >= 65 ? '#60a5fa'
-                          : score >= 50 ? '#f0a202'
-                          : '#f65f5f';
-                        const tier = score === null
-                          ? 'Pending'
-                          : score >= 85 ? 'Excellent'
-                          : score >= 70 ? 'Strong'
-                          : score >= 50 ? 'Partial'
-                          : 'Needs work';
+                        const ringColor = score === null ? '#555'
+                            : score >= 80 ? '#2dd4bf'
+                            : score >= 65 ? '#60a5fa'
+                            : score >= 50 ? '#f0a202'
+                            : '#f65f5f';
                         const storedGradeLetter = ((chat.finalScore?.grade || '').toString().trim().charAt(0) || '').toUpperCase();
-                        const derivedGradeLetter = score === null
-                          ? 'P'
-                          : score >= 85 ? 'A'
-                          : score >= 70 ? 'B'
-                          : score >= 50 ? 'C'
-                          : score >= 35 ? 'D'
-                          : 'F';
-                        const gradeLetter = ['A', 'B', 'C', 'D', 'F'].includes(storedGradeLetter)
-                          ? storedGradeLetter
-                          : derivedGradeLetter;
+                        const derivedGradeLetter = score === null ? 'P'
+                            : score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 50 ? 'C' : score >= 35 ? 'D' : 'F';
+                        const gradeLetter = ['A','B','C','D','F'].includes(storedGradeLetter) ? storedGradeLetter : derivedGradeLetter;
                         const gradeClass = gradeLetter === 'A' ? 'grade-a'
-                          : gradeLetter === 'B' ? 'grade-b'
-                          : gradeLetter === 'C' ? 'grade-c'
-                          : gradeLetter === 'D' ? 'grade-d'
-                          : gradeLetter === 'F' ? 'grade-f'
-                          : 'grade-pending';
+                            : gradeLetter === 'B' ? 'grade-b'
+                            : gradeLetter === 'C' ? 'grade-c'
+                            : gradeLetter === 'D' ? 'grade-d'
+                            : gradeLetter === 'F' ? 'grade-f'
+                            : 'grade-pending';
                     %>
                     <a href="/openai/logs/<%= chat.chatId %>" class="resume-card glass chat-log-card-link chat-grade-card <%= gradeClass %>">
                         <div class="chat-grade-card__letter"><%= gradeLetter %></div>
@@ -77,8 +68,16 @@
                 <% }) %>
             </div>
         <% } else { %>
-            <p class="muted" style="text-align:center; margin-top:30px;">No chat logs yet.</p>
+            <div class="pg-empty">
+                <p class="eyebrow">Nothing here yet</p>
+                <h3>No chat logs yet</h3>
+                <p>Start a mock interview and complete a session to see it archived here.</p>
+                <a href="/openai" class="btn-primary lp-btn-glow">Start interview</a>
+            </div>
         <% } %>
-    </section>
+    </div>
+</section>
+
+<%- include('partials/footer'); %>
 </body>
 </html>

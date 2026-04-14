@@ -8,45 +8,104 @@
 <body>
     <%- include('partials/navbar'); %>
 
-    <section class="form-section" style="padding-top:40px;">
-        <div class="form-container">
-            <h1>Your Profile</h1>
-            <p class="form-subtext">Update your display name or password.</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 16px;">
-              <a href="/resumes" class="btn-outline">Resumes</a>
-              <a href="/resumes?archived=1" class="btn-outline">Archived Resumes</a>
-              <% if (user && user.role === 'admin') { %><a href="/admin/users" class="btn-outline">Admin Panel</a><% } %>
-            </div>
-            <% if (error) { %><p style="color:#f88;"><%= error %></p><% } %>
-            <% if (success) { %><p style="color:#6f6;"><%= success %></p><% } %>
-            <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
-              <% 
-                const nameSafe = (user && (user.name || user.username)) || 'User';
-                const initials = nameSafe.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
-              %>
-              <div class="nav-avatar" style="width:64px;height:64px;"><%= initials %></div>
-            </div>
-            <form action="/profile" method="POST">
-                <label>Username</label>
-                <input type="text" value="<%= (user && user.username) ? user.username : '' %>" disabled>
+    <%
+        const nameSafe = (user && (user.name || user.username)) || 'User';
+        const initials = nameSafe.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase();
+    %>
 
-                <label>Name</label>
-                <input type="text" name="name" placeholder="Your name" value="<%= (user && user.name) ? user.name : '' %>">
+    <section class="profile-page">
+        <div class="section-shell profile-shell">
 
-                <label>Role</label>
-                <input type="text" value="<%= (user && user.role) ? user.role : 'candidate' %>" disabled>
+            <!-- Left: avatar + quick links -->
+            <aside class="profile-aside">
+                <div class="profile-identity glass">
+                    <div class="profile-avatar"><%= initials %></div>
+                    <div>
+                        <p class="profile-display-name"><%= nameSafe %></p>
+                        <p class="profile-role-badge"><%= (user && user.role) ? user.role : 'candidate' %></p>
+                    </div>
+                </div>
 
-                <label>New Password (leave blank to keep current)</label>
-                <input type="password" name="password" placeholder="********">
+                <nav class="profile-links glass">
+                    <p class="eyebrow" style="margin-bottom:12px;">Quick links</p>
+                    <a href="/openai" class="profile-nav-link">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="10" cy="7" r="3" stroke="#60a5fa" stroke-width="1.6"/><path d="M3 17c0-3.3 3-6 7-6s7 2.7 7 6" stroke="#60a5fa" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        Mock interview
+                    </a>
+                    <a href="/resumes" class="profile-nav-link">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><rect x="4" y="2" width="12" height="16" rx="2" stroke="#60a5fa" stroke-width="1.6"/><path d="M7 7h6M7 10h6M7 13h4" stroke="#60a5fa" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        My resumes
+                    </a>
+<a href="/openai/logs" class="profile-nav-link">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M3 5h14M3 9h14M3 13h8" stroke="#60a5fa" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        Chat logs
+                    </a>
+                    <% if (user && user.role === 'admin') { %>
+                    <a href="/admin/users" class="profile-nav-link profile-nav-link--admin">
+                        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h6a2 2 0 0 1 2 2v4M9 3v14m0 0H5a2 2 0 0 1-2-2v-4m6 6h6a2 2 0 0 0 2-2v-4m0 0H3" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        Admin panel
+                    </a>
+                    <% } %>
+                </nav>
 
-                <button type="submit" class="btn-primary full-width">Save Changes</button>
-            </form>
+                <form action="/logout" method="POST">
+                    <button type="submit" class="profile-logout-btn">Sign out</button>
+                </form>
+            </aside>
 
-            <form action="/logout" method="POST" style="margin-top:16px;">
-                <button type="submit" class="btn-danger full-width">Logout</button>
-            </form>
+            <!-- Right: edit form -->
+            <main class="profile-main">
+                <div class="profile-form-card glass">
+                    <div class="profile-form-head">
+                        <div>
+                            <p class="eyebrow">Account</p>
+                            <h2 class="profile-form-title">Your Profile</h2>
+                        </div>
+                    </div>
+
+                    <% if (error) { %>
+                        <p class="auth-error"><%= error %></p>
+                    <% } %>
+                    <% if (success) { %>
+                        <p class="profile-success"><%= success %></p>
+                    <% } %>
+
+                    <form action="/profile" method="POST" class="profile-edit-form">
+
+                        <div class="profile-field-group">
+                            <label class="profile-label">Username</label>
+                            <input class="profile-input profile-input--disabled" type="text"
+                                value="<%= (user && user.username) ? user.username : '' %>" disabled>
+                            <span class="profile-field-hint">Username cannot be changed.</span>
+                        </div>
+
+                        <div class="profile-field-group">
+                            <label class="profile-label">Display name</label>
+                            <input class="profile-input" type="text" name="name"
+                                placeholder="How should we greet you?"
+                                value="<%= (user && user.name) ? user.name : '' %>">
+                        </div>
+
+                        <div class="profile-field-group">
+                            <label class="profile-label">Role</label>
+                            <input class="profile-input profile-input--disabled" type="text"
+                                value="<%= (user && user.role) ? user.role : 'candidate' %>" disabled>
+                        </div>
+
+                        <div class="profile-field-group">
+                            <label class="profile-label">New password</label>
+                            <input class="profile-input" type="password" name="password"
+                                placeholder="Leave blank to keep current">
+                        </div>
+
+                        <button type="submit" class="profile-save-btn">Save changes</button>
+                    </form>
+                </div>
+            </main>
+
         </div>
     </section>
+
     <%- include('partials/footer'); %>
 </body>
 </html>

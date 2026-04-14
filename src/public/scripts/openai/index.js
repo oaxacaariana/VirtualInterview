@@ -24,8 +24,13 @@ const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
 const cameraToggleBtn = document.getElementById('iv-toggle-camera');
 const muteBtn = document.getElementById('iv-toggle-mute');
 
+const lottiePLayer = document.getElementById('aria-lottie');
+
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
+  if (lottiePLayer) {
+    lottiePLayer.setSpeed(talking ? 1.6 : 0.8);
+  }
 };
 
 const tts = createTTS({

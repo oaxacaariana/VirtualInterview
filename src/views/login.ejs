@@ -1,35 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login | Virtual Interview</title>
+    <title>Sign In | Virtual Interview</title>
     <link rel="stylesheet" href="/styles/app.css">
+    <style>
+        body { overflow: hidden; }
+    </style>
 </head>
-<body>
-    <nav class="navbar">
-        <div class="logo">Virtual Interview Simulator</div>
-        <div class="nav-links">
-            <a href="/" class="btn-outline">Home</a>
-            <a href="/signup" class="btn-primary">Sign Up</a>
-        </div>
-    </nav>
+<body class="auth-page">
 
-    <section class="form-section">
-        <div class="form-container">
-            <h1>Sign in</h1>
-            <p class="form-subtext">Access uploads, results, and the AI coach.</p>
-            <% if (error) { %>
-                <p style="color:#f88;"><%= error %></p>
+    <!-- background -->
+    <div class="auth-bg">
+        <div class="auth-planet"></div>
+        <div class="auth-planet-glow"></div>
+        <div class="auth-star auth-star--1"></div>
+        <div class="auth-star auth-star--2"></div>
+        <div class="auth-star auth-star--3"></div>
+        <div class="auth-ambient"></div>
+    </div>
+
+    <!-- card -->
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-card__glow"></div>
+
+            <a href="/" class="auth-logo">Virtual Interview</a>
+
+            <div class="auth-card__head">
+                <h1 class="auth-title">Sign In</h1>
+                <p class="auth-sub">Keep it all together once you're in the flow.</p>
+            </div>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+                <p class="auth-error"><%= error %></p>
             <% } %>
-            <form action="/login" method="POST">
-                <label>Username</label>
-                <input type="text" name="username" required>
 
-                <label>Password</label>
-                <input type="password" name="password" required>
+            <form action="/login" method="POST" class="auth-form">
+                <div class="auth-field">
+                    <input type="text" name="username" placeholder="Username" required autocomplete="username">
+                </div>
+                <div class="auth-field">
+                    <input type="password" name="password" id="auth-pw" placeholder="Password" required autocomplete="current-password">
+                    <button type="button" class="auth-show-btn" onclick="togglePw(this)">Show</button>
+                </div>
 
-                <button type="submit" class="btn-primary full-width">Login</button>
+                <button type="submit" class="auth-submit">Sign In</button>
             </form>
+
+            <p class="auth-footer-link">New here? <a href="/signup">Create an account</a></p>
         </div>
-    </section>
+    </div>
+
+    <script>
+        function togglePw(btn) {
+            const input = document.getElementById('auth-pw');
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.textContent = isHidden ? 'Hide' : 'Show';
+        }
+    </script>
 </body>
 </html>

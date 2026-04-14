@@ -1,3 +1,32 @@
+@media (max-width: 1024px) {
+    .lp-bento__card--wide {
+        grid-column: span 12;
+        grid-template-columns: 1fr;
+    }
+
+    .lp-bento__card {
+        grid-column: span 6;
+    }
+
+    .lp-bento__card--cta {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width: 900px) {
+    .profile-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-aside {
+        position: static;
+    }
+
+    .dash-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 900px) {
     .iv-controls-bar {
         grid-template-columns: 1fr;
@@ -42,6 +71,17 @@
         grid-template-columns: 1fr;
     }
 
+    .lp-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .lp-bento__card,
+    .lp-bento__card--cta,
+    .lp-bento__card--wide {
+        grid-column: span 12;
+        grid-template-columns: 1fr;
+    }
+
     .form-shell {
         max-width: 620px;
         grid-template-columns: 1fr;
@@ -79,11 +119,24 @@
     .hero,
     .footer1,
     .ai-shell,
-    .upload-page,
-    .feature-rail-section,
-    .landing-grid-section {
+    .upload-page {
         padding-left: 20px;
         padding-right: 20px;
+    }
+
+    .lp-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .lp-hero__h1 {
+        font-size: 2.2rem;
+    }
+
+    .lp-bento__card,
+    .lp-bento__card--cta,
+    .lp-bento__card--wide {
+        grid-column: span 12;
+        grid-template-columns: 1fr;
     }
 
     .accent-illu {
