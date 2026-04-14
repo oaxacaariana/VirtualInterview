@@ -29,7 +29,7 @@
     "mongodb": "^7.1.0",
     "multer": "^2.0.2",
     "openai": "^4.28.4",
-    "pdfreader": "^3.0.8"
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
