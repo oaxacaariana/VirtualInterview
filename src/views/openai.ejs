@@ -158,6 +158,28 @@
                 </div>
             </div>
 
+            <div id="eye-calibration-overlay" class="eye-calibration-overlay hidden" aria-hidden="true">
+                <div class="eye-calibration-copy">
+                    <p class="eyebrow">Eye calibration</p>
+                    <h3>Click each point while looking directly at it</h3>
+                    <p>Use this to improve tracking drift. Each point needs 5 clicks before it locks in.</p>
+                    <div class="eye-calibration-actions">
+                        <button type="button" id="eye-calibration-cancel" class="btn-outline">Cancel</button>
+                    </div>
+                </div>
+                <div class="eye-calibration-surface" aria-hidden="true">
+                    <button type="button" class="eye-calibration-point" data-point="1">1</button>
+                    <button type="button" class="eye-calibration-point" data-point="2">2</button>
+                    <button type="button" class="eye-calibration-point" data-point="3">3</button>
+                    <button type="button" class="eye-calibration-point" data-point="4">4</button>
+                    <button type="button" class="eye-calibration-point" data-point="5">5</button>
+                    <button type="button" class="eye-calibration-point" data-point="6">6</button>
+                    <button type="button" class="eye-calibration-point" data-point="7">7</button>
+                    <button type="button" class="eye-calibration-point" data-point="8">8</button>
+                    <button type="button" class="eye-calibration-point" data-point="9">9</button>
+                </div>
+            </div>
+
             <aside class="iv-side-panel" id="iv-chat-panel" aria-hidden="true">
                 <div class="iv-panel-head">
                     <div>
@@ -188,10 +210,12 @@
                     </div>
 
                     <div id="coach-tabpanel-live" class="coach-tab-panel is-active" role="tabpanel" aria-labelledby="coach-tab-live">
+                        <div id="live-engagement-panel" class="engagement-panel"></div>
                         <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
                     </div>
 
                     <div id="coach-tabpanel-final" class="coach-tab-panel" role="tabpanel" aria-labelledby="coach-tab-final">
+                        <div id="final-engagement-panel" class="engagement-panel"></div>
                         <div id="final-score-panel" class="final-score-panel"></div>
                     </div>
                 </div>
@@ -217,6 +241,14 @@
                         <line class="cam-off-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                     </svg>
                     Camera
+                </button>
+                <button type="button" id="iv-recalibrate" class="iv-icon-btn" title="Calibrate eye tracking">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/>
+                        <circle cx="10" cy="10" r="1.4" fill="currentColor"/>
+                        <path d="M10 1.8v2.1M10 16.1v2.1M18.2 10h-2.1M3.9 10H1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Calibrate
                 </button>
                 <span id="mic-status" class="muted" style="font-size:0.82rem;"></span>
             </div>

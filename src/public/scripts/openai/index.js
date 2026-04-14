@@ -10,6 +10,7 @@ import { createInitialState, createEmptyContext, replaceState } from './state.js
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
 import { createTTS } from './tts.js';
+import { createEyeTracking } from './eyeTracking.js';
 
 const interviewConfig = window.__INTERVIEW_CONFIG__ || {};
 const personaById = Object.fromEntries((interviewConfig.personas || []).map((persona) => [persona.id, persona]));
@@ -25,18 +26,33 @@ const toggleChatBtn = document.getElementById('iv-toggle-chat');
 const toggleCoachBtn = document.getElementById('iv-toggle-coach');
 const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
 const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+const recalibrateBtn = document.getElementById('iv-recalibrate');
 const muteBtn = document.getElementById('iv-toggle-mute');
 const interviewBootOverlay = document.getElementById('interview-boot-overlay');
 const interviewerNameEl = document.getElementById('iv-interviewer-name');
 const interviewerBadgeEl = document.getElementById('iv-interviewer-badge');
+const calibrationOverlay = document.getElementById('eye-calibration-overlay');
+const calibrationCancelBtn = document.getElementById('eye-calibration-cancel');
+const calibrationPoints = [...document.querySelectorAll('.eye-calibration-point')];
+
+let assistantAudioPlaying = false;
+let eyeTracking = null;
 
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
 };
 
 const tts = createTTS({
-  onStart: () => setAvatarTalking(true),
-  onEnd: () => setAvatarTalking(false),
+  onStart: () => {
+    assistantAudioPlaying = true;
+    setAvatarTalking(true);
+    eyeTracking?.syncMeasurementWindow();
+  },
+  onEnd: () => {
+    assistantAudioPlaying = false;
+    setAvatarTalking(false);
+    eyeTracking?.syncMeasurementWindow();
+  },
 });
 
 const syncMuteBtn = () => {
@@ -121,232 +137,6 @@ document.getElementById('iv-coach-close')?.addEventListener('click', () => {
   toggleCoachBtn?.classList.remove('is-active');
 });
 
-const promptForEyeTracking = async () => {
-  if (!window.webgazer) {
-    return false;
-  }
-
-  const cachedChoice = sessionStorage.getItem('iv-eye-tracking-choice');
-  if (cachedChoice) {
-    return cachedChoice === 'yes';
-  }
-
-  const savedChoice = localStorage.getItem('iv-eye-tracking');
-  if (savedChoice === 'yes' || savedChoice === 'on') {
-    sessionStorage.setItem('iv-eye-tracking-choice', 'yes');
-    return true;
-  }
-  if (savedChoice === 'no' || savedChoice === 'off') {
-    sessionStorage.setItem('iv-eye-tracking-choice', 'no');
-    return false;
-  }
-
-  if (window.Swal?.fire) {
-    const result = await window.Swal.fire({
-      title: 'Track Eye Movement',
-      text: 'Would you like to track eye movement during your interview to receive feedback on your eye contact?',
-      showCancelButton: true,
-      showConfirmButton: true,
-      cancelButtonText: 'No',
-      confirmButtonText: 'Yes',
-      background: 'linear-gradient(180deg, rgba(20,23,32,0.96), rgba(15,15,16,0.98))',
-      color: '#dbeafe',
-      titleColor: '#93c5fd',
-      customClass: {
-        confirmButton: 'swal-btn-confirm',
-        cancelButton: 'swal-btn-cancel',
-      },
-      buttonsStyling: false,
-    });
-
-    sessionStorage.setItem('iv-eye-tracking-choice', result.isConfirmed ? 'yes' : 'no');
-    return result.isConfirmed;
-  }
-
-  const accepted = window.confirm(
-    'Track eye movement during your interview to receive feedback on your eye contact?'
-  );
-  sessionStorage.setItem('iv-eye-tracking-choice', accepted ? 'yes' : 'no');
-  return accepted;
-};
-
-let cameraStream = null;
-let cameraEnabled = localStorage.getItem('iv-camera') !== 'off';
-let eyeTrackingEnabled = localStorage.getItem('iv-eye-tracking') !== 'off';
-let webgazerInitialized = false;
-let eyeContactTotal = 0;
-let eyeContactHits = 0;
-
-const setEyeTrackingState = (active, focused = null) => {
-  if (!eyeTrackingSpot) return;
-  eyeTrackingSpot.classList.toggle('is-active', active);
-  eyeTrackingSpot.classList.toggle('is-focused', focused === true);
-  eyeTrackingSpot.classList.toggle('is-missed', focused === false);
-};
-
-const isOverlap = (xPos, yPos) => {
-  const rect = eyeTrackingSpot?.getBoundingClientRect();
-  if (!rect) return false;
-  return xPos >= rect.left && xPos <= rect.right && yPos >= rect.top && yPos <= rect.bottom;
-};
-
-const updateEyeTrackingBadge = () => {
-  if (!stageLiveBadge) return;
-  if (!cameraStream) {
-    stageLiveBadge.removeAttribute('data-eye-score');
-    return;
-  }
-
-  if (!eyeTrackingEnabled || !eyeContactTotal) {
-    stageLiveBadge.removeAttribute('data-eye-score');
-    return;
-  }
-
-  stageLiveBadge.setAttribute('data-eye-score', `${Math.round((eyeContactHits / eyeContactTotal) * 100)}% eye`);
-};
-
-const pauseEyeTracking = () => {
-  setEyeTrackingState(false);
-  if (!window.webgazer || !webgazerInitialized) {
-    updateEyeTrackingBadge();
-    return;
-  }
-
-  try {
-    window.webgazer.pause();
-  } catch {
-    // no-op
-  }
-
-  updateEyeTrackingBadge();
-};
-
-const startEyeTracking = async () => {
-  if (!window.webgazer || !eyeTrackingEnabled) {
-    return;
-  }
-
-  try {
-    if (!webgazerInitialized) {
-      window.webgazer.params.faceMeshBasePath = '/mediapipe/face_mesh/';
-      await window.webgazer
-        .setRegression('ridge')
-        .setGazeListener((data) => {
-          if (!data || !cameraStream) return;
-
-          eyeContactTotal += 1;
-          const focused = isOverlap(data.x, data.y);
-          if (focused) {
-            eyeContactHits += 1;
-          }
-          setEyeTrackingState(true, focused);
-          updateEyeTrackingBadge();
-        })
-        .saveDataAcrossSessions(true)
-        .begin();
-
-      window.webgazer
-        .showVideoPreview(false)
-        .showPredictionPoints(false)
-        .applyKalmanFilter(true)
-        .showFaceOverlay(false)
-        .showFaceFeedbackBox(false);
-
-      webgazerInitialized = true;
-    } else {
-      await window.webgazer.resume();
-    }
-
-    setEyeTrackingState(true);
-  } catch (error) {
-    console.warn('Eye tracking failed to start:', error);
-    eyeTrackingEnabled = false;
-    localStorage.setItem('iv-eye-tracking', 'off');
-    setEyeTrackingState(false);
-    updateEyeTrackingBadge();
-  }
-};
-
-const setCameraUI = (on) => {
-  if (cameraFeed) cameraFeed.classList.toggle('hidden', !on);
-  if (cameraPlaceholder) cameraPlaceholder.classList.toggle('hidden', on);
-  if (stageLiveBadge) stageLiveBadge.style.display = on ? '' : 'none';
-  if (cameraToggleBtn) {
-    cameraToggleBtn.classList.toggle('is-active', on);
-    cameraToggleBtn.title = on ? 'Turn camera off' : 'Turn camera on';
-  }
-  if (!on) {
-    setEyeTrackingState(false);
-  }
-  updateEyeTrackingBadge();
-};
-
-const stopCamera = () => {
-  cameraStream?.getTracks().forEach((track) => track.stop());
-  cameraStream = null;
-  if (cameraFeed) {
-    cameraFeed.srcObject = null;
-  }
-  pauseEyeTracking();
-  setCameraUI(false);
-};
-
-const startCamera = async () => {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    setCameraUI(false);
-    return;
-  }
-
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    if (cameraFeed) {
-      cameraFeed.srcObject = cameraStream;
-    }
-    setCameraUI(true);
-
-    const shouldTrackEyes = await promptForEyeTracking();
-    eyeTrackingEnabled = shouldTrackEyes;
-    localStorage.setItem('iv-eye-tracking', shouldTrackEyes ? 'on' : 'off');
-
-    if (shouldTrackEyes) {
-      await startEyeTracking();
-    } else {
-      setEyeTrackingState(false);
-      updateEyeTrackingBadge();
-    }
-  } catch (error) {
-    console.warn('Camera failed to start:', error);
-    setCameraUI(false);
-  }
-};
-
-cameraToggleBtn?.addEventListener('click', async () => {
-  cameraEnabled = !cameraEnabled;
-  localStorage.setItem('iv-camera', cameraEnabled ? 'on' : 'off');
-  if (cameraEnabled) {
-    await startCamera();
-  } else {
-    stopCamera();
-  }
-});
-
-if (cameraEnabled) {
-  void startCamera();
-} else {
-  setCameraUI(false);
-}
-
-window.addEventListener('beforeunload', () => {
-  stopCamera();
-  if (window.webgazer && webgazerInitialized) {
-    try {
-      window.webgazer.end();
-    } catch {
-      // no-op
-    }
-  }
-});
-
 const elements = {
   chatLog: document.getElementById('chat-log'),
   form: document.getElementById('ai-form'),
@@ -388,6 +178,8 @@ const elements = {
   crazyModeBlock: document.getElementById('crazy-mode-block'),
   analysisPanel: document.getElementById('analysis-panel'),
   finalScorePanel: document.getElementById('final-score-panel'),
+  liveEngagementPanel: document.getElementById('live-engagement-panel'),
+  finalEngagementPanel: document.getElementById('final-engagement-panel'),
   analysisPrivacyBtn: document.getElementById('analysis-privacy-btn'),
   toggleChatBtn,
   toggleCoachBtn,
@@ -432,6 +224,31 @@ const persist = () => saveState(state);
 const hasInterviewVisible = () => state.history.length > 0 || !!state.finalReview;
 const hasStartedInterview = () => state.history.length > 0;
 const hasActiveInterview = () => !!(hasStartedInterview() && state.chatId && state.contextSet && !state.interviewComplete);
+const getLastHistoryRole = () => state.history[state.history.length - 1]?.role || '';
+
+eyeTracking = createEyeTracking({
+  cameraFeed,
+  cameraPlaceholder,
+  stageLiveBadge,
+  eyeTrackingSpot,
+  cameraToggleBtn,
+  recalibrateBtn,
+  calibrationOverlay,
+  calibrationCancelBtn,
+  calibrationPoints,
+  shouldMeasure: () =>
+    hasActiveInterview() &&
+    !interviewBootLoading &&
+    !assistantAudioPlaying &&
+    getLastHistoryRole() === 'assistant',
+  onMetricChange: (metric) => {
+    chatView.setScreenEngagementMetric(metric);
+  },
+});
+
+const syncScreenEngagementTracking = () => {
+  eyeTracking?.syncMeasurementWindow();
+};
 
 const mergeResolvedContext = (payload = {}) => {
   const keys = [
@@ -510,6 +327,7 @@ const setInterviewBootLoading = (loading) => {
   }
   syncInteractiveControls();
   syncSetupModalState();
+  syncScreenEngagementTracking();
 };
 
 const markActivity = () => {
@@ -627,6 +445,7 @@ const resetChat = () => {
   clearInactivityTimer();
   tts.stop();
   clearSubtitle();
+  eyeTracking?.resetMetric();
   chatView.clearMessages();
   replaceState(state, createInitialState());
   state.context = createEmptyContext();
@@ -643,6 +462,7 @@ const resetChat = () => {
   setInterviewBootLoading(false);
   chatView.setStatus('Set up interview', false);
   syncInterviewerPresentation();
+  syncScreenEngagementTracking();
 };
 
 const hydrate = () => {
@@ -673,6 +493,7 @@ const hydrate = () => {
     syncInterviewerPresentation();
     syncSetupModalState();
     syncInteractiveControls();
+    syncScreenEngagementTracking();
     return true;
   }
 
@@ -710,6 +531,7 @@ const hydrate = () => {
   syncSetupModalState();
   syncInteractiveControls();
   scheduleInactivityTimeout();
+  syncScreenEngagementTracking();
   return true;
 };
 
@@ -720,6 +542,7 @@ const completeInterview = async (assistantMessage) => {
     addAssistantMessage(assistantMessage);
     state.history.push({ role: 'assistant', content: assistantMessage });
   }
+  syncScreenEngagementTracking();
   chatView.setInterviewComplete(true);
   syncInteractiveControls();
   syncSetupModalState();
@@ -777,6 +600,7 @@ elements.form.addEventListener('submit', async (event) => {
   const turnNumber = countUserTurns(priorTranscript) + 1;
   const userBubble = addUserMessage(prompt, turnNumber);
   state.history.push({ role: 'user', content: prompt });
+  syncScreenEngagementTracking();
   markActivity();
   elements.promptInput.value = '';
   clearSubtitle();
@@ -803,6 +627,7 @@ elements.form.addEventListener('submit', async (event) => {
     syncInterviewerPresentation();
     addAssistantMessage(data.reply);
     state.history.push({ role: 'assistant', content: data.reply });
+    syncScreenEngagementTracking();
     markActivity();
     chatView.setIdleAnalysis();
 
@@ -873,6 +698,7 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
     syncInterviewerPresentation();
     addAssistantMessage(data.opener);
     state.history.push({ role: 'assistant', content: data.opener });
+    syncScreenEngagementTracking();
     contextModal.setMode('view');
     markActivity();
     scheduleInactivityTimeout();
@@ -946,6 +772,9 @@ if (!hydrate()) {
 }
 
 chatView.setCoachBlurred(state.coachBlurred);
+eyeTracking?.init();
+chatView.setScreenEngagementMetric(eyeTracking?.getMetric() || null);
 syncInterviewerPresentation();
 syncInteractiveControls();
 syncSetupModalState();
+syncScreenEngagementTracking();

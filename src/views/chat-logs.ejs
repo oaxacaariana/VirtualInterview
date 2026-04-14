@@ -20,9 +20,13 @@
         </div>
 
         <% if (chats && chats.length) { %>
-            <div class="resumes-grid">
+            <div class="resumes-grid chat-logs-grid">
                 <% chats.forEach(chat => { %>
                     <%
+                        const rawRoleTitle = chat.context?.role || 'Interview';
+                        const displayRoleTitle = rawRoleTitle.length > 44
+                          ? `${rawRoleTitle.slice(0, 41)}...`
+                          : rawRoleTitle;
                         const rawScore = chat.finalScore?.overallScore;
                         const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
                         const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
@@ -60,11 +64,12 @@
                         <div class="chat-grade-card__letter"><%= gradeLetter %></div>
                         <div class="resume-card__top">
                             <div class="resume-card__meta">
-                                <h3 class="resume-title"><%= chat.context?.role || 'Interview' %></h3>
+                                <h3 class="resume-title" title="<%= rawRoleTitle %>"><%= displayRoleTitle %></h3>
                                 <p class="muted" style="margin-top:4px;">Company: <%= chat.context?.company || 'Not set' %></p>
                                 <div class="pill-row" style="margin-top:10px;">
                                     <span class="pill">Status: <%= chat.status || 'unknown' %></span>
                                     <span class="pill">Updated: <%= chat.updatedAt ? new Date(chat.updatedAt).toISOString().slice(0,16).replace('T',' ') : 'n/a' %></span>
+                                    <span class="pill">Length: <%= chat.interviewLength || 'n/a' %></span>
                                     <span class="pill">Mode: <%= chat.context?.modeLabel || (chat.context?.silly ? 'Crazy Mode' : 'Operating Mode') %></span>
                                     <span class="pill">Persona: <%= chat.context?.personaLabel || 'Legacy interviewer' %></span>
                                 </div>

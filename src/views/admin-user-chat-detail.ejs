@@ -16,6 +16,7 @@
                 <p class="muted">Company: <%= chat.context?.company || 'Not set' %></p>
                 <div class="pill-row" style="margin-top:10px;">
                     <span class="pill">Status: <%= chat.status || 'unknown' %></span>
+                    <span class="pill">Length: <%= chat.interviewLength || 'n/a' %></span>
                     <span class="pill">Mode: <%= chat.context?.modeLabel || (chat.context?.silly ? 'Crazy Mode' : 'Operating Mode') %></span>
                     <span class="pill">Persona: <%= chat.context?.personaLabel || 'Legacy interviewer' %></span>
                     <span class="pill">Voice: <%= chat.context?.ttsVoice || 'default' %></span>

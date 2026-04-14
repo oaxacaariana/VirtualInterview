@@ -23,11 +23,29 @@ const verdictClass = (verdict) => {
   return 'is-mixed';
 };
 
+const formatDuration = (ms = 0) => {
+  const totalSeconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${minutes}m ${seconds}s`;
+};
+
 export const createChatView = (elements) => {
   const {
     chatLog,
     analysisPanel,
     finalScorePanel,
+    liveEngagementPanel,
+    finalEngagementPanel,
     statusDot,
     promptInput,
     sendBtn,
@@ -45,6 +63,7 @@ export const createChatView = (elements) => {
   let draftBubble = null;
   let draftTextNode = null;
   let draftMetaNode = null;
+  let screenEngagementMetric = null;
 
   const setStatus = (label, active = false) => {
     statusDot.textContent = label;
@@ -53,11 +72,81 @@ export const createChatView = (elements) => {
 
   const setCoachBlurred = (blurred) => {
     analysisPanel.classList.toggle('is-blurred', blurred);
+    liveEngagementPanel?.classList.toggle('is-blurred', blurred);
     chatLog.classList.toggle('coach-inline-blurred', blurred);
     if (analysisPrivacyBtn) {
       analysisPrivacyBtn.textContent = blurred ? 'Show coach' : 'Blur coach';
       analysisPrivacyBtn.classList.toggle('active', blurred);
     }
+  };
+
+  const renderEngagementMetric = (panel, metric, { compact = false } = {}) => {
+    if (!panel) return;
+
+    if (!metric) {
+      panel.innerHTML = `
+        <div class="coach-card coach-card-engagement is-empty">
+          <p class="coach-card__eyebrow">Screen engagement</p>
+          <p class="muted">Turn on camera tracking to see the on-screen gaze test here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const headline =
+      typeof metric.scorePct === 'number'
+        ? `${metric.scorePct}% on-screen`
+        : metric.calibrationActive
+          ? 'Calibrating tracking'
+          : metric.enabled
+            ? metric.calibrated
+              ? 'Waiting for answer window'
+              : 'Calibrate for accuracy'
+            : 'Tracking unavailable';
+
+    const summary = metric.calibrationActive
+      ? 'Click each calibration point while looking directly at it.'
+      : !metric.enabled
+        ? 'Camera + eye tracking need to be on before this test-only signal can run.'
+        : metric.status === 'paused'
+          ? 'The metric only scores answer windows, so it pauses while the interviewer is talking.'
+          : metric.status === 'unknown'
+            ? 'Tracking is live, but the current gaze signal is uncertain or stale.'
+            : 'Broad on-screen gaze test. This does not require staring at one exact point.';
+
+    panel.innerHTML = `
+      <div class="coach-card coach-card-engagement ${metric.status === 'off' ? 'is-missed' : metric.status === 'on' ? 'is-focused' : ''}">
+        <div class="coach-card__head">
+          <div>
+            <p class="coach-card__eyebrow">Screen engagement</p>
+            <h4>${escapeHtml(headline)}</h4>
+          </div>
+          <span class="engagement-state-pill">${escapeHtml(metric.calibrationActive ? 'Calibrating' : metric.statusLabel || 'Idle')}</span>
+        </div>
+        <p class="coach-card__summary">${escapeHtml(summary)}</p>
+        <div class="engagement-stat-grid ${compact ? 'is-compact' : ''}">
+          <div class="engagement-stat">
+            <span>On-screen</span>
+            <strong>${escapeHtml(formatDuration(metric.onScreenMs))}</strong>
+          </div>
+          <div class="engagement-stat">
+            <span>Off-screen</span>
+            <strong>${escapeHtml(formatDuration(metric.offScreenMs))}</strong>
+          </div>
+          <div class="engagement-stat">
+            <span>Unknown</span>
+            <strong>${escapeHtml(formatDuration(metric.unknownMs))}</strong>
+          </div>
+        </div>
+        <p class="engagement-note">Test only. This is not included in your saved interview grade yet.</p>
+      </div>
+    `;
+  };
+
+  const setScreenEngagementMetric = (metric) => {
+    screenEngagementMetric = metric;
+    renderEngagementMetric(liveEngagementPanel, screenEngagementMetric);
+    renderEngagementMetric(finalEngagementPanel, screenEngagementMetric, { compact: true });
   };
 
   const setCoachTab = (tab) => {
@@ -359,6 +448,7 @@ export const createChatView = (elements) => {
   setIdleAnalysis();
   setFinalPlaceholder();
   setCoachTab('live');
+  setScreenEngagementMetric(null);
 
   return {
     addMessage,
@@ -369,6 +459,7 @@ export const createChatView = (elements) => {
     setCoachBlurred,
     setCoachTab,
     setStatus,
+    setScreenEngagementMetric,
     setInterviewComplete,
     showTurnAnalysis,
     showFinalReview,
