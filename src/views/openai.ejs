@@ -8,7 +8,15 @@
     <script src="/scripts/eye-tracking/face-api.min.js"></script>
 </head>
 <body>
+    <% const safeInterviewConfig = typeof interviewConfig === 'undefined' ? {} : interviewConfig; %>
     <%- include('partials/navbar'); %>
+    <script id="interview-config" type="application/json"><%- JSON.stringify(safeInterviewConfig) %></script>
+    <script>
+        const interviewConfigNode = document.getElementById('interview-config');
+        window.__INTERVIEW_CONFIG__ = interviewConfigNode
+            ? JSON.parse(interviewConfigNode.textContent || '{}')
+            : {};
+    </script>
 
     <div class="iv-shell">
         <div class="iv-stage">
@@ -78,8 +86,8 @@
                 </svg>
 
                 <div class="iv-aria-nametag">
-                    <span class="iv-aria-name">Aria</span>
-                    <span class="stage-badge">Hiring Manager</span>
+                    <span class="iv-aria-name" id="iv-interviewer-name">Dorian</span>
+                    <span class="stage-badge" id="iv-interviewer-badge">Skeptical Manager</span>
                 </div>
 
                 <div class="av-talk-ring"></div>
@@ -259,6 +267,27 @@
                             <label>Target role / title</label>
                             <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
 
+                            <div class="setup-card setup-card-subtle">
+                                <div class="setup-card__head">
+                                    <div>
+                                        <p class="eyebrow">Interview mode</p>
+                                        <h4>Choose how the interviewer behaves</h4>
+                                    </div>
+                                </div>
+                                <div class="mode-card-grid">
+                                    <label class="mode-card">
+                                        <input type="radio" name="ctx-mode" id="ctx-mode-operating" value="operating" checked>
+                                        <span class="mode-card__title">Operating mode</span>
+                                        <span class="mode-card__copy">Maximum scrutiny, hardest grading, and no buzzword leniency.</span>
+                                    </label>
+                                    <label class="mode-card">
+                                        <input type="radio" name="ctx-mode" id="ctx-mode-crazy" value="crazy">
+                                        <span class="mode-card__title">Crazy mode</span>
+                                        <span class="mode-card__copy">Experimental and playful. Sliders and custom tone unlock here.</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="setup-switches">
                                 <label class="switch-row">
                                     <span>
@@ -270,29 +299,78 @@
                                         <span class="switch-ui"></span>
                                     </span>
                                 </label>
-
-                                <label class="switch-row">
-                                    <span>
-                                        <strong>Crazy mode</strong>
-                                        <small class="muted">Playful, parody-heavy interviewer tone.</small>
-                                    </span>
-                                    <span class="switch">
-                                        <input type="checkbox" id="ctx-silly">
-                                        <span class="switch-ui"></span>
-                                    </span>
-                                </label>
                             </div>
 
-                            <div id="custom-tone-block" class="hidden">
-                                <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
-                                <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                            <div id="operating-mode-block" class="setup-note-card">
+                                <p class="eyebrow">Operating mode locks</p>
+                                <h4>High scrutiny is fixed</h4>
+                                <p class="muted">Difficulty, complexity, and grading strictness are pinned high. Personalities change delivery and voice, but not the bar.</p>
+                                <div class="pill-row" style="margin-top:10px;">
+                                    <span class="pill">Difficulty: max</span>
+                                    <span class="pill">Complexity: max</span>
+                                    <span class="pill">Grading: harsh</span>
+                                </div>
                             </div>
+
                         </div>
+                    </div>
 
-                        <div class="setup-card">
-                            <div class="slider-stack">
-                                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
-                                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
+                    <div class="setup-column">
+                        <div id="persona-mode-block" class="setup-card">
+                            <div class="setup-card__head">
+                                <div>
+                                    <p class="eyebrow">Interviewer personality</p>
+                                    <h4>Select your interviewer</h4>
+                                </div>
+                                <p class="muted">Voice and delivery change. Operating mode keeps the same hard bar.</p>
+                            </div>
+                            <div class="persona-card-grid">
+                                <% (safeInterviewConfig?.personas || []).forEach(function(persona) { %>
+                                    <div class="persona-card" data-persona-id="<%= persona.id %>">
+                                        <div class="persona-card__head">
+                                            <div>
+                                                <h4><%= persona.label %></h4>
+                                                <p class="muted"><%= persona.interviewerName %></p>
+                                            </div>
+                                            <span class="pill"><%= persona.voice %></span>
+                                        </div>
+                                        <p class="persona-card__copy"><%= persona.summary %></p>
+                                        <div class="pill-row">
+                                            <% (persona.chips || []).forEach(function(chip) { %>
+                                                <span class="pill"><%= chip %></span>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            </div>
+                            <input type="hidden" id="ctx-persona" value="">
+                        </div>
+                            <div id="crazy-mode-block" class="setup-card hidden">
+                                <div class="setup-card__head">
+                                    <div>
+                                        <p class="eyebrow">Crazy tuning</p>
+                                        <h4>Adjust the chaos</h4>
+                                </div>
+                                <p class="muted">Unlocked only in crazy mode.</p>
+                            </div>
+
+                                <div id="custom-tone-block">
+                                    <label for="ctx-custom-tone">Additional instructions</label>
+                                    <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                                </div>
+
+                                <div>
+                                    <label for="ctx-voice">AI voice</label>
+                                    <select id="ctx-voice">
+                                        <% (safeInterviewConfig?.voiceOptions || []).forEach(function(voice) { %>
+                                            <option value="<%= voice.id %>"><%= voice.label %></option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+
+                                <div class="slider-stack">
+                                    <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
+                                    <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
 
                                 <label for="ctx-style">Professionalism style <span id="style-val" class="slider-val"></span></label>
                                 <input type="range" id="ctx-style" min="0" max="1" step="0.01" value="0.5">
@@ -305,33 +383,31 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="setup-column">
-                        <div class="setup-card">
-                            <div class="setup-card__head">
-                                <div>
-                                    <p class="eyebrow">Resume source</p>
-                                    <h4>Select resume</h4>
-                                </div>
-                                <p class="muted">Used for interview context and grading.</p>
-                            </div>
-                            <div class="resume-card-grid">
-                                <% (resumes || []).forEach(function(r) { %>
-                                  <div class="resume-card" data-resume-id="<%= r._id %>">
-                                    <div class="resume-card__top">
-                                      <h4><%= r.originalName %></h4>
-                                      <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
-                                        <div class="score-ring__fill"></div>
-                                        <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
-                                      </div>
-                                    </div>
-                                    <p class="muted">Tap to select</p>
-                                  </div>
-                                <% }); %>
-                            </div>
-                            <input type="hidden" id="ctx-resume" value="">
+                <div class="setup-card setup-card-span">
+                    <div class="setup-card__head">
+                        <div>
+                            <p class="eyebrow">Resume source</p>
+                            <h4>Select resume</h4>
                         </div>
+                        <p class="muted">Used for interview context and grading.</p>
                     </div>
+                    <div class="resume-card-grid resume-card-grid-wide">
+                        <% (resumes || []).forEach(function(r) { %>
+                          <div class="resume-card" data-resume-id="<%= r._id %>">
+                            <div class="resume-card__top">
+                              <h4><%= r.originalName %></h4>
+                              <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
+                                <div class="score-ring__fill"></div>
+                                <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                              </div>
+                            </div>
+                            <p class="muted">Tap to select</p>
+                          </div>
+                        <% }); %>
+                    </div>
+                    <input type="hidden" id="ctx-resume" value="">
                 </div>
 
                 <div class="modal-footer">

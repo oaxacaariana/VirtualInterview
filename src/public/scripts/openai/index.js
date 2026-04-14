@@ -11,6 +11,9 @@ import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
 import { createTTS } from './tts.js';
 
+const interviewConfig = window.__INTERVIEW_CONFIG__ || {};
+const personaById = Object.fromEntries((interviewConfig.personas || []).map((persona) => [persona.id, persona]));
+
 const avatarContainer = document.getElementById('avatar-container');
 const cameraFeed = document.getElementById('camera-feed');
 const cameraPlaceholder = document.getElementById('camera-placeholder');
@@ -24,6 +27,8 @@ const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
 const cameraToggleBtn = document.getElementById('iv-toggle-camera');
 const muteBtn = document.getElementById('iv-toggle-mute');
 const interviewBootOverlay = document.getElementById('interview-boot-overlay');
+const interviewerNameEl = document.getElementById('iv-interviewer-name');
+const interviewerBadgeEl = document.getElementById('iv-interviewer-badge');
 
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
@@ -363,7 +368,10 @@ const elements = {
   ctxRole: document.getElementById('ctx-role'),
   ctxResume: document.getElementById('ctx-resume'),
   ctxWebSearch: document.getElementById('ctx-web-search'),
-  ctxSilly: document.getElementById('ctx-silly'),
+  ctxModeOperating: document.getElementById('ctx-mode-operating'),
+  ctxModeCrazy: document.getElementById('ctx-mode-crazy'),
+  ctxPersona: document.getElementById('ctx-persona'),
+  ctxVoice: document.getElementById('ctx-voice'),
   ctxCustomTone: document.getElementById('ctx-custom-tone'),
   ctxSeriousness: document.getElementById('ctx-seriousness'),
   ctxStyle: document.getElementById('ctx-style'),
@@ -374,6 +382,10 @@ const elements = {
   difficultyVal: document.getElementById('difficulty-val'),
   complexityVal: document.getElementById('complexity-val'),
   resumeCards: [...document.querySelectorAll('.resume-card')],
+  personaCards: [...document.querySelectorAll('.persona-card')],
+  operatingModeBlock: document.getElementById('operating-mode-block'),
+  personaModeBlock: document.getElementById('persona-mode-block'),
+  crazyModeBlock: document.getElementById('crazy-mode-block'),
   analysisPanel: document.getElementById('analysis-panel'),
   finalScorePanel: document.getElementById('final-score-panel'),
   analysisPrivacyBtn: document.getElementById('analysis-privacy-btn'),
@@ -401,6 +413,12 @@ createVoiceInput({
   micBtn: elements.micBtn,
   micStatus: elements.micStatus,
   promptInput: elements.promptInput,
+  onDraftUpdate: ({ text, status }) => {
+    chatView.setDraftMessage({ text, status });
+  },
+  onDraftClear: () => {
+    chatView.clearDraftMessage();
+  },
 });
 
 const newChatId = () => {
@@ -414,6 +432,48 @@ const persist = () => saveState(state);
 const hasInterviewVisible = () => state.history.length > 0 || !!state.finalReview;
 const hasStartedInterview = () => state.history.length > 0;
 const hasActiveInterview = () => !!(hasStartedInterview() && state.chatId && state.contextSet && !state.interviewComplete);
+
+const mergeResolvedContext = (payload = {}) => {
+  const keys = [
+    'mode',
+    'modeLabel',
+    'personaId',
+    'personaLabel',
+    'personaSummary',
+    'personaPromptStyle',
+    'interviewerName',
+    'ttsVoice',
+    'ttsInstructions',
+    'gradingProfile',
+    'scrutinyProfile',
+    'silly',
+    'customTone',
+    'seriousness',
+    'style',
+    'difficulty',
+    'complexity',
+    'webSearchEnabled',
+  ];
+
+  keys.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      state.context[key] = payload[key];
+    }
+  });
+};
+
+const syncInterviewerPresentation = () => {
+  const persona = personaById[state.context.personaId] || null;
+  const interviewerName = state.context.interviewerName || persona?.interviewerName || 'Dorian';
+  const interviewerBadge = state.context.personaLabel || persona?.label || 'Skeptical Manager';
+
+  if (interviewerNameEl) {
+    interviewerNameEl.textContent = interviewerName;
+  }
+  if (interviewerBadgeEl) {
+    interviewerBadgeEl.textContent = interviewerBadge;
+  }
+};
 
 const syncInteractiveControls = () => {
   const canRespond = hasStartedInterview() && !state.interviewComplete && !interviewBootLoading;
@@ -439,7 +499,7 @@ const syncInteractiveControls = () => {
 };
 
 const syncSetupModalState = () => {
-  contextModal.setDismissible(hasInterviewVisible() && !interviewBootLoading);
+  contextModal.setDismissible(hasActiveInterview() && !interviewBootLoading);
 };
 
 const setInterviewBootLoading = (loading) => {
@@ -510,7 +570,10 @@ const addAssistantMessage = (content, options = {}) => {
     setSubtitle(content);
   }
   if (shouldSpeak) {
-    void tts.play(content);
+    void tts.play(content, {
+      voice: state.context.ttsVoice,
+      instructions: state.context.ttsInstructions,
+    });
   }
 };
 
@@ -579,6 +642,7 @@ const resetChat = () => {
   chatView.setCoachTab('live');
   setInterviewBootLoading(false);
   chatView.setStatus('Set up interview', false);
+  syncInterviewerPresentation();
 };
 
 const hydrate = () => {
@@ -606,6 +670,7 @@ const hydrate = () => {
     clearSubtitle();
     contextModal.open();
     chatView.setStatus('Set up interview', false);
+    syncInterviewerPresentation();
     syncSetupModalState();
     syncInteractiveControls();
     return true;
@@ -641,6 +706,7 @@ const hydrate = () => {
     chatView.setFinalPlaceholder();
   }
   contextModal.close();
+  syncInterviewerPresentation();
   syncSetupModalState();
   syncInteractiveControls();
   scheduleInactivityTimeout();
@@ -725,8 +791,7 @@ elements.form.addEventListener('submit', async (event) => {
       ...state.context,
     });
 
-    addAssistantMessage(data.reply);
-    state.history.push({ role: 'assistant', content: data.reply });
+    mergeResolvedContext(data);
     state.chatId = data.chatId || state.chatId;
     if (data.backgroundDoc) {
       state.context.backgroundDoc = data.backgroundDoc;
@@ -735,6 +800,9 @@ elements.form.addEventListener('submit', async (event) => {
       state.context.researchSummary = data.researchSummary || '';
       state.context.webSignals = data.webSignals || '';
     }
+    syncInterviewerPresentation();
+    addAssistantMessage(data.reply);
+    state.history.push({ role: 'assistant', content: data.reply });
     markActivity();
     chatView.setIdleAnalysis();
 
@@ -793,8 +861,7 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
       throw new Error('Interview setup finished without an opening prompt. Please try again.');
     }
 
-    addAssistantMessage(data.opener);
-    state.history.push({ role: 'assistant', content: data.opener });
+    mergeResolvedContext(data);
     state.chatId = data.chatId || state.chatId;
     if (data.backgroundDoc) {
       state.context.backgroundDoc = data.backgroundDoc;
@@ -803,6 +870,9 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
       state.context.researchSummary = data.researchSummary || '';
       state.context.webSignals = data.webSignals || '';
     }
+    syncInterviewerPresentation();
+    addAssistantMessage(data.opener);
+    state.history.push({ role: 'assistant', content: data.opener });
     contextModal.setMode('view');
     markActivity();
     scheduleInactivityTimeout();
@@ -876,5 +946,6 @@ if (!hydrate()) {
 }
 
 chatView.setCoachBlurred(state.coachBlurred);
+syncInterviewerPresentation();
 syncInteractiveControls();
 syncSetupModalState();

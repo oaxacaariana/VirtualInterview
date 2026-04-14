@@ -28,6 +28,7 @@ const {
   finalizeInterview,
   ensureChatId,
 } = require('./interviewService');
+const { getInterviewClientConfig } = require('./interviewConfig');
 
 const showOpenAIPage = async (req, res) => {
   try {
@@ -35,10 +36,18 @@ const showOpenAIPage = async (req, res) => {
       collections: req.app.locals.collections,
       sessionUser: req.session?.user,
     });
-    return res.render('openai', { model: interviewModel, resumes });
+    return res.render('openai', {
+      model: interviewModel,
+      resumes,
+      interviewConfig: getInterviewClientConfig(),
+    });
   } catch (error) {
     console.warn('Failed to load resumes for openai page:', error.message);
-    return res.render('openai', { model: interviewModel, resumes: [] });
+    return res.render('openai', {
+      model: interviewModel,
+      resumes: [],
+      interviewConfig: getInterviewClientConfig(),
+    });
   }
 };
 

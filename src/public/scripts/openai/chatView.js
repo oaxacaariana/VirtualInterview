@@ -42,6 +42,9 @@ export const createChatView = (elements) => {
     coachTabPanelFinal,
     completeBanner,
   } = elements;
+  let draftBubble = null;
+  let draftTextNode = null;
+  let draftMetaNode = null;
 
   const setStatus = (label, active = false) => {
     statusDot.textContent = label;
@@ -267,6 +270,42 @@ export const createChatView = (elements) => {
     return bubble;
   };
 
+  const ensureDraftBubble = () => {
+    if (draftBubble) {
+      return draftBubble;
+    }
+
+    draftBubble = document.createElement('div');
+    draftBubble.className = 'bubble user bubble-draft';
+    draftBubble.title = 'Live speech draft';
+
+    draftTextNode = document.createElement('div');
+    draftTextNode.className = 'bubble__text';
+    draftBubble.appendChild(draftTextNode);
+
+    draftMetaNode = document.createElement('div');
+    draftMetaNode.className = 'bubble-draft__meta';
+    draftBubble.appendChild(draftMetaNode);
+
+    chatLog.appendChild(draftBubble);
+    return draftBubble;
+  };
+
+  const setDraftMessage = ({ text = '', status = '' } = {}) => {
+    const bubble = ensureDraftBubble();
+    draftTextNode.textContent = text || 'Listening...';
+    draftMetaNode.textContent = status || 'Live transcription';
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return bubble;
+  };
+
+  const clearDraftMessage = () => {
+    draftBubble?.remove();
+    draftBubble = null;
+    draftTextNode = null;
+    draftMetaNode = null;
+  };
+
   const attachInlineAnalysis = (bubble, analysis) => {
     if (!bubble || !analysis) return;
 
@@ -285,6 +324,7 @@ export const createChatView = (elements) => {
   };
 
   const clearMessages = () => {
+    clearDraftMessage();
     chatLog.innerHTML = '';
   };
 
@@ -323,7 +363,9 @@ export const createChatView = (elements) => {
   return {
     addMessage,
     attachInlineAnalysis,
+    clearDraftMessage,
     clearMessages,
+    setDraftMessage,
     setCoachBlurred,
     setCoachTab,
     setStatus,

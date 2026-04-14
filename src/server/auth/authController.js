@@ -13,6 +13,27 @@ const saveSession = (req) =>
     });
   });
 
+const establishSession = (req, user, mustChangePassword = false) =>
+  new Promise((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      req.session.user = user;
+      req.session.mustChangePassword = mustChangePassword;
+
+      req.session.save((saveError) => {
+        if (saveError) {
+          reject(saveError);
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+
 const showLogin = (req, res) => {
   res.render('login', { error: null });
 };
@@ -31,9 +52,8 @@ const showSignup = (req, res) => {
 
 const signup = async (req, res) => {
   try {
-    req.session.user = await signupUser(req.app.locals.collections, req.body || {});
-    req.session.mustChangePassword = false;
-    await saveSession(req);
+    const user = await signupUser(req.app.locals.collections, req.body || {});
+    await establishSession(req, user, false);
     res.redirect('/');
   } catch (error) {
     console.error('Signup failed:', error);
@@ -49,9 +69,7 @@ const login = async (req, res) => {
       req.app.locals.collections,
       req.body || {}
     );
-    req.session.user = user;
-    req.session.mustChangePassword = usedTemporaryPassword;
-    await saveSession(req);
+    await establishSession(req, user, usedTemporaryPassword);
     res.redirect('/');
   } catch (error) {
     console.error('Login failed:', error);
@@ -85,6 +103,7 @@ const forgotPassword = async (req, res) => {
 
 const logout = (req, res) => {
   req.session.destroy(() => {
+    res.clearCookie('virtual_interview.sid');
     res.redirect('/');
   });
 };

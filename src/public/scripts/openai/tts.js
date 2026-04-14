@@ -32,7 +32,7 @@ export const createTTS = ({ onStart, onEnd }) => {
     onEnd?.();
   };
 
-  const play = async (text) => {
+  const play = async (text, options = {}) => {
     stop();
     if (muted || !text?.trim()) return;
 
@@ -40,7 +40,11 @@ export const createTTS = ({ onStart, onEnd }) => {
       const res = await fetch('/openai/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          text,
+          voice: options.voice || '',
+          instructions: options.instructions || '',
+        }),
       });
 
       if (!res.ok) {

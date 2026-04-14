@@ -111,10 +111,14 @@ const createTurnAnalysis = async ({
   turnNumber,
   company,
   role,
+  mode = 'operating',
+  gradingProfile = 'strict-operating-v1',
+  personaLabel = 'Hiring Manager',
   backgroundDoc,
   questionAsked,
   candidateResponse,
 }) => {
+  const isStrictOperating = mode === 'operating' || gradingProfile === 'strict-operating-v1';
   const completion = await openaiClient.chat.completions.create({
     model: reviewModel,
     temperature: 0.2,
@@ -127,7 +131,12 @@ const createTurnAnalysis = async ({
           'Decide whether the answer to the previous interview question was strong, mixed, or weak.',
           'Use only the provided question, candidate response, company, role, and background context.',
           'Do not reference any previous sessions or outside context.',
-          'Keep the analysis generic and practical, not heavily scored.',
+          isStrictOperating
+            ? 'Operating mode rubric: grade harshly. Do not reward buzzwords, frameworks, or polished phrasing unless the answer proves direct ownership, concrete detail, reasoning, and outcomes.'
+            : 'Keep the analysis generic and practical, not heavily scored.',
+          isStrictOperating
+            ? 'Treat vague ownership, missing metrics, generic STAR language, shallow tradeoff analysis, and indirect answers as meaningful weaknesses.'
+            : 'Keep the analysis grounded in the direct evidence of the answer.',
           'Return valid JSON only.',
           'Return exactly this shape: {"score":0,"verdict":"strong","questionAnswered":true,"summary":"","positives":["","",""],"negatives":["","",""]}',
           'score must be from 1 to 10 and reflect how effective the answer was for that question.',
@@ -139,6 +148,9 @@ const createTurnAnalysis = async ({
       {
         role: 'user',
         content: [
+          `Interview mode: ${mode}`,
+          `Grading profile: ${gradingProfile}`,
+          `Interviewer persona: ${personaLabel}`,
           `Company: ${company || 'Not provided.'}`,
           `Role: ${role || 'Not provided.'}`,
           `Background context: ${backgroundDoc || 'Not provided.'}`,
@@ -161,6 +173,9 @@ const createFinalInterviewReview = async ({
   role,
   resumeText,
   jobDescription,
+  mode = 'operating',
+  gradingProfile = 'strict-operating-v1',
+  personaLabel = 'Hiring Manager',
   difficulty = 0.5,
   turns,
 }) => {
@@ -189,7 +204,12 @@ const createFinalInterviewReview = async ({
           'Use only the information explicitly provided in this request.',
           'Do not reference prior sessions, uploads, or outside context.',
           'Ground your evaluation in the actual transcript and turn reviews.',
-          'Calibrate scoring against the selected interview difficulty: harder interviews should be graded more leniently for missed perfection, while easy interviews should be graded a bit more strictly.',
+          mode === 'operating' || gradingProfile === 'strict-operating-v1'
+            ? 'Operating mode rubric: use a harsher bar than standard. Do not add leniency because the interview was difficult. Generic buzzwords, vague ownership, and low-evidence answers should materially reduce scores.'
+            : 'Calibrate scoring against the selected interview difficulty: harder interviews should be graded more leniently for missed perfection, while easy interviews should be graded a bit more strictly.',
+          mode === 'operating' || gradingProfile === 'strict-operating-v1'
+            ? 'Reward specificity, direct ownership, measurable outcomes, tradeoff reasoning, and responsiveness to follow-up pressure. Penalize shallow answers even if they sound polished.'
+            : 'Reward practical relevance, clarity, and evidence from the transcript.',
           'Return valid JSON only.',
           'Use category scores from 1 to 10 and overallScore from 0 to 100.',
           'Overall summary should be 5 to 8 sentences in second person.',
@@ -201,6 +221,9 @@ const createFinalInterviewReview = async ({
       {
         role: 'user',
         content: [
+          `Interview mode:\n${mode}`,
+          `Grading profile:\n${gradingProfile}`,
+          `Interviewer persona:\n${personaLabel}`,
           `Job Description:\n${jobDescription || 'Not provided.'}`,
           `Company:\n${company || 'Not provided.'}`,
           `Role:\n${role || 'Not provided.'}`,

@@ -65,7 +65,8 @@
                                 <div class="pill-row" style="margin-top:10px;">
                                     <span class="pill">Status: <%= chat.status || 'unknown' %></span>
                                     <span class="pill">Updated: <%= chat.updatedAt ? new Date(chat.updatedAt).toISOString().slice(0,16).replace('T',' ') : 'n/a' %></span>
-                                    <span class="pill">Difficulty: <%= chat.context?.difficulty ?? 0.5 %></span>
+                                    <span class="pill">Mode: <%= chat.context?.modeLabel || (chat.context?.silly ? 'Crazy Mode' : 'Operating Mode') %></span>
+                                    <span class="pill">Persona: <%= chat.context?.personaLabel || 'Legacy interviewer' %></span>
                                 </div>
                             </div>
                             <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= ringColor %>; flex-shrink:0;">
