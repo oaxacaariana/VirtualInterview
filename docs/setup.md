@@ -28,6 +28,8 @@ SESSION_SECRET=some-long-random-string
 NODE_ENV=development
 MODEL=gpt-4.1-mini
 REVIEW_MODEL=gpt-4.1-mini
+TTS_MODEL=gpt-4o-mini-tts
+TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
 ```
 
 If you want to boot against a local MongoDB instance instead of Atlas:
@@ -81,5 +83,7 @@ That file loads:
 - The resume parser currently supports PDF and DOCX inputs using the current parser implementation in `src/server/shared/resumeParser.js`.
 - The interview UI serves local eye-tracking assets from `src/public/models/` and `src/public/mediapipe/`.
 - Voice input depends on browser speech-recognition support.
+- The app can also use the server-side `/openai/transcribe` endpoint for recorded interview audio.
 - Camera preview and eye-contact tracking require the user to grant browser camera access.
 - Interviewer TTS requires a valid `OPENAI_API_KEY` because it is generated server-side through OpenAI.
+- The default interviewer voice model is `gpt-4o-mini-tts`, and the setup modal can override voice and speaking style per interview.

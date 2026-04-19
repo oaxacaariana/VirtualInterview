@@ -1,6 +1,6 @@
 # Virtual Interview App
 
-Express + EJS app for uploading resumes, scoring them against a target role, and running a customizable mock interview workflow.
+Express + EJS app for uploading resumes, scoring them against a target role with qualitative fit labels, and running a customizable mock interview workflow with configurable interviewer personas, voices, and review scoring.
 
 ## Quick Start
 
@@ -21,6 +21,8 @@ Express + EJS app for uploading resumes, scoring them against a target role, and
    NODE_ENV=development
    MODEL=gpt-4.1-mini
    REVIEW_MODEL=gpt-4.1-mini
+   TTS_MODEL=gpt-4o-mini-tts
+   TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
    ```
 
 4. Start the app:
@@ -47,10 +49,10 @@ Project docs live in the [`docs/`](./docs/index.md) folder and are designed to b
 
 - account creation and login
 - resume upload and preview
-- resume scoring against a job description
+- resume scoring against a job description with qualitative fit labels
 - archived and active resume management
-- mock interview generation with stored context
-- transcript history and interview review persistence
+- mock interview generation with stored context, selectable interviewer personas, and TTS voices
+- transcript history, graded interview review persistence, and DNF archives for incomplete chats
 
 ## Tech Stack
 

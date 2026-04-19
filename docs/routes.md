@@ -96,6 +96,8 @@ Shows an admin preview of the stored resume text.
 
 Renders the selected user's saved chat logs.
 
+Use `?dnf=1` to show the DNF archive instead of graded chats.
+
 ### `GET /admin/users/:userId/chats/:chatId`
 
 Renders the selected user's saved chat log detail page.
@@ -106,6 +108,8 @@ Renders the selected user's saved chat log detail page.
 
 Renders the interview page with the avatar stage, setup modal, transcript/coach panels, and browser-side camera or voice controls.
 
+The setup flow includes role/company context, resume selection, interviewer persona, and TTS voice selection.
+
 ### `POST /openai/start`
 
 Starts an interview session.
@@ -113,6 +117,8 @@ Starts an interview session.
 ### `POST /openai/ask`
 
 Continues an interview session with the next turn.
+
+The interview prompt flow is designed to prefer one main question at a time, with deeper follow-ups broken into smaller sequential questions.
 
 ### `POST /openai/close`
 
@@ -126,13 +132,21 @@ Fetches review data for an interview turn.
 
 Generates interviewer speech audio for browser playback.
 
+### `POST /openai/transcribe`
+
+Transcribes recorded interview audio into text for the browser interview flow.
+
 ### `GET /openai/logs`
 
-Renders transcript history.
+Renders graded transcript history.
+
+Use `?dnf=1` to view the DNF archive for incomplete interviews.
 
 ### `GET /openai/logs.json`
 
 Returns transcript summaries as JSON.
+
+Supports the same `?dnf=1` filtering as the HTML log view.
 
 ### `GET /openai/logs/:chatId`
 
@@ -146,18 +160,19 @@ Renders transcript details for one chat.
 4. Optional web research is run.
 5. OpenAI scoring is generated.
 6. Score metadata is persisted.
-7. Results are rendered.
+7. Results are rendered with qualitative fit labels plus rubric-backed strengths and gaps.
 
 ## High-Level Interview Flow
 
 1. User selects a resume and enters interview context.
-2. The app loads resume text and prior context.
+2. The app resolves persona, voice, and grading settings, then loads resume text and prior context.
 3. The browser can enable microphone input, camera preview, and optional eye-contact tracking.
-4. The app generates interview prompts with OpenAI.
-5. Interviewer replies can be spoken back through the TTS endpoint.
-6. Each turn is persisted.
-7. Turn reviews are generated asynchronously.
-8. Final review is generated when the interview is closed.
+4. The interview opens with a short human intro and begins with easier rapport-building questions.
+5. The app generates interview prompts with OpenAI and keeps deeper probing split across smaller sequential turns.
+6. Interviewer replies can be spoken back through the TTS endpoint.
+7. Each turn is persisted.
+8. Turn reviews are generated asynchronously.
+9. Final review is generated when the interview is closed, with the rubric favoring relevant, focused answers over unnecessary detail, and incomplete interviews are surfaced separately in the DNF archive.
 
 ## High-Level Admin Flow
 

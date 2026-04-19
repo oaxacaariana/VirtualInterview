@@ -55,6 +55,80 @@ Optional override for interview review generation.
 
 If omitted, the app falls back to `MODEL`.
 
+### `TTS_MODEL`
+
+Optional OpenAI model used for interviewer text-to-speech generation.
+
+Current default in code:
+
+```env
+gpt-4o-mini-tts
+```
+
+This default supports promptable speech instructions.
+
+### `TTS_VOICE`
+
+Optional fallback TTS voice for interviewer playback.
+
+Current default in code:
+
+```env
+shimmer
+```
+
+The interview setup UI also exposes selectable persona-linked voices such as `alloy`, `echo`, `nova`, `onyx`, `ballad`, `cedar`, `marin`, and `verse`.
+
+### `TTS_FORMAT`
+
+Optional audio format returned by the TTS endpoint.
+
+Current default in code:
+
+```env
+mp3
+```
+
+### `TTS_INSTRUCTIONS`
+
+Optional fallback speech-style instructions used when a request does not provide persona-specific TTS instructions.
+
+Current default in code:
+
+```env
+Speak like a calm, professional mock interviewer. Sound clear, confident, and encouraging.
+```
+
+### `TRANSCRIBE_MODEL`
+
+Optional OpenAI model used by `/openai/transcribe`.
+
+Current default in code:
+
+```env
+gpt-4o-mini-transcribe
+```
+
+### `TRANSCRIBE_LANGUAGE`
+
+Optional default language hint for interview transcription.
+
+Current default in code:
+
+```env
+en
+```
+
+### `TRANSCRIBE_PROMPT`
+
+Optional default transcription prompt.
+
+Current default in code:
+
+```env
+Transcribe spoken interview answers clearly, preserving punctuation and common technical terms.
+```
+
 ### `SESSION_COLLECTION`
 
 Optional override for the MongoDB collection used by the session store.
@@ -111,6 +185,11 @@ SESSION_SECRET=replace-with-a-long-random-secret
 NODE_ENV=production
 MODEL=gpt-4.1-mini
 REVIEW_MODEL=gpt-4.1-mini
+TTS_MODEL=gpt-4o-mini-tts
+TTS_VOICE=shimmer
+TTS_FORMAT=mp3
+TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+TRANSCRIBE_LANGUAGE=en
 ```
 
 Local MongoDB override example:
@@ -127,3 +206,4 @@ LOCAL_MONGODB_DB=VirtualInterviewLocal
 - Rotate secrets if they are ever pasted into chat, screenshots, or Git history.
 - Atlas passwords with special characters must be URL-encoded in `MONGODB_URI`.
 - `DB_BOOT_MODE=local` makes both the main app connection and the session store use local MongoDB together.
+- Persona-specific TTS instructions chosen in the interview setup flow override the global `TTS_INSTRUCTIONS` fallback for that session.
