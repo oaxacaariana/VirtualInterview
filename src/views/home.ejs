@@ -9,193 +9,300 @@
 
     <%- include('partials/navbar'); %>
 
-    <section class="hero hero-home">
-        <div class="hero-grid hero-grid-home">
-            <div class="hero-content hero-content-home">
-                <div class="pill-row hero-pills">
-                    <span class="pill">Resume scoring</span>
-                    <span class="pill">Mock interviews</span>
-                    <span class="pill">Coach feedback</span>
-                </div>
-                <h1>Train like the interview is already scheduled.</h1>
-                <p>
-                    Upload your resume, pressure-test it against a real job description, then jump into a mock interview that adapts to your target role, company, and chosen tone.
-                </p>
-                <div class="hero-cta-row">
-                    <a href="/upload" class="btn-primary">Score your resume</a>
-                    <a href="/openai" class="btn-outline">Start a mock interview</a>
-                </div>
-                <div class="hero-metrics">
-                    <div class="hero-metric glass">
-                        <strong>Resume fit</strong>
-                        <span>See whether your resume feels job-ready or still reads thin.</span>
-                    </div>
-                    <div class="hero-metric glass">
-                        <strong>Interview pressure</strong>
-                        <span>Dial seriousness, directness, and difficulty before you practice.</span>
-                    </div>
-                </div>
+    <% if (currentUser) { %>
+
+    <!-- ── Logged-in dashboard ─────────────────────────────── -->
+    <section class="dash-hero">
+        <div class="dash-orb dash-orb--blue"></div>
+        <div class="dash-orb dash-orb--purple"></div>
+        <div class="lp-dot-grid"></div>
+        <div class="section-shell dash-hero__inner">
+            <div class="dash-hero__text">
+                <p class="eyebrow">Welcome back</p>
+                <h1 class="dash-hero__name"><%= currentUser.name || currentUser.username %></h1>
+                <p class="dash-hero__sub">Pick up where you left off or start something new.</p>
             </div>
-            <div class="hero-visual hero-visual-home">
-                <div class="hero-dashboard glass">
-                    <div class="hero-dashboard__top">
-                        <div>
-                            <p class="eyebrow">Live workflow</p>
-                            <h3>From resume to final review</h3>
-                        </div>
-                        <span class="hero-badge">Practice stack</span>
-                    </div>
-                    <div class="hero-dashboard__stack">
-                        <div class="hero-stage">
-                            <span class="hero-stage__num">01</span>
-                            <div>
-                                <strong>Upload + score</strong>
-                                <p>Compare resume quality, completeness, impact, and role fit.</p>
-                            </div>
-                        </div>
-                        <div class="hero-stage">
-                            <span class="hero-stage__num">02</span>
-                            <div>
-                                <strong>Tailored interview</strong>
-                                <p>Bring in company context, resume highlights, and adjustable interviewer behavior.</p>
-                            </div>
-                        </div>
-                        <div class="hero-stage">
-                            <span class="hero-stage__num">03</span>
-                            <div>
-                                <strong>Saved feedback</strong>
-                                <p>Keep transcripts, revisit scorecards, and spot patterns across sessions.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <a href="/openai" class="btn-primary lp-btn-glow dash-hero__cta">Start interview →</a>
         </div>
     </section>
 
-    <section class="feature-rail-section">
+    <section class="dash-cards-section">
         <div class="section-shell">
-            <div class="section-head">
-                <div>
-                    <p class="eyebrow">What it does</p>
-                    <h2>Scroll through the full prep flow</h2>
-                </div>
-                <div class="rail-actions">
-                    <button type="button" class="rail-btn" id="rail-prev" aria-label="Scroll left">&lsaquo;</button>
-                    <button type="button" class="rail-btn" id="rail-next" aria-label="Scroll right">&rsaquo;</button>
-                </div>
-            </div>
+            <div class="dash-cards-grid">
 
-            <div class="feature-rail" id="feature-rail">
-                <article class="feature-slide glass">
-                    <p class="eyebrow">Resume audit</p>
-                    <h3>See whether your resume is actually convincing</h3>
-                    <p>Score role fit, depth, impact, completeness, structure, and project quality instead of just counting keywords.</p>
-                    <ul class="card-list">
-                        <li>Maximum-strictness scoring by default</li>
-                        <li>Optional web research for company context</li>
-                        <li>Saved scorecards you can revisit later</li>
-                    </ul>
-                </article>
+                <a href="/openai" class="dash-card dash-card--primary">
+                    <div class="dash-card__bg-icon">
+                        <svg viewBox="0 0 24 24" fill="none" width="100" height="100" opacity="0.12">
+                            <circle cx="12" cy="8" r="4" stroke="#fff" stroke-width="1.2"/>
+                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="dash-card__icon dash-card__icon--teal">
+                        <svg viewBox="0 0 24 24" fill="none" width="26" height="26">
+                            <circle cx="12" cy="8" r="4" stroke="#2dd4bf" stroke-width="1.8"/>
+                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#2dd4bf" stroke-width="1.8" stroke-linecap="round"/>
+                            <circle cx="19" cy="6" r="2.5" fill="#2dd4bf"/>
+                            <path d="M19 5v2M18 6h2" stroke="#0b1220" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="dash-card__title">Mock interview</h3>
+                    <p class="dash-card__sub">Practice with Aria, your AI hiring manager. Adjustable difficulty and tone.</p>
+                    <span class="dash-card__cta">Start now →</span>
+                </a>
 
-                <article class="feature-slide glass">
-                    <p class="eyebrow">Interview setup</p>
-                    <h3>Tune the interviewer before the first question</h3>
-                    <p>Pick a resume, set the company and role, and control how intense or playful the session feels.</p>
-                    <ul class="card-list">
-                        <li>Seriousness, style, and difficulty sliders</li>
-                        <li>Optional crazy mode</li>
-                        <li>Company-aware questioning flow</li>
-                    </ul>
-                </article>
+                <a href="/upload" class="dash-card dash-card--blue">
+                    <div class="dash-card__bg-icon">
+                        <svg viewBox="0 0 24 24" fill="none" width="100" height="100" opacity="0.10">
+                            <rect x="4" y="3" width="16" height="18" rx="2" stroke="#fff" stroke-width="1.2"/>
+                            <path d="M8 8h8M8 12h8M8 16h5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="dash-card__icon dash-card__icon--blue">
+                        <svg viewBox="0 0 24 24" fill="none" width="26" height="26">
+                            <rect x="4" y="3" width="16" height="18" rx="2" stroke="#60a5fa" stroke-width="1.8"/>
+                            <path d="M8 8h8M8 12h8M8 16h5" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+                            <circle cx="19" cy="19" r="3.5" fill="#60a5fa"/>
+                            <path d="M19 17.5v3M17.5 19h3" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="dash-card__title">Score a resume</h3>
+                    <p class="dash-card__sub">Upload and pressure-test against a real job description.</p>
+                    <span class="dash-card__cta">Upload →</span>
+                </a>
 
-                <article class="feature-slide glass">
-                    <p class="eyebrow">Mock interview</p>
-                    <h3>Practice in a back-and-forth that feels less scripted</h3>
-                    <p>The interviewer keeps context from your resume and target role, asks one main question at a time, and reacts to your actual answers.</p>
-                    <ul class="card-list">
-                        <li>Resume-backed questioning</li>
-                        <li>Voice dictation support</li>
-                        <li>Saved transcript history</li>
-                    </ul>
-                </article>
+                <a href="/openai/logs" class="dash-card dash-card--purple">
+                    <div class="dash-card__bg-icon">
+                        <svg viewBox="0 0 24 24" fill="none" width="100" height="100" opacity="0.10">
+                            <path d="M4 6h16M4 10h16M4 14h10" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="dash-card__icon dash-card__icon--purple">
+                        <svg viewBox="0 0 24 24" fill="none" width="26" height="26">
+                            <path d="M4 6h16M4 10h16M4 14h10" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round"/>
+                            <circle cx="18" cy="17" r="3.5" fill="#a78bfa"/>
+                            <path d="M16.5 17l1 1 2-2" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="dash-card__title">Chat logs</h3>
+                    <p class="dash-card__sub">Review transcripts, scores, and patterns from past sessions.</p>
+                    <span class="dash-card__cta">View logs →</span>
+                </a>
 
-                <article class="feature-slide glass">
-                    <p class="eyebrow">Review loop</p>
-                    <h3>Catch the patterns that keep repeating</h3>
-                    <p>Use final interview reviews and archived chats to see whether your answers are getting sharper, more specific, and more role-aligned.</p>
-                    <ul class="card-list">
-                        <li>Final grading after the interview closes</li>
-                        <li>Chat log archive by role and company</li>
-                        <li>Per-session score summaries</li>
-                    </ul>
-                </article>
+                <a href="/resumes" class="dash-card dash-card--blue">
+                    <div class="dash-card__bg-icon">
+                        <svg viewBox="0 0 24 24" fill="none" width="100" height="100" opacity="0.10">
+                            <rect x="3" y="4" width="13" height="16" rx="2" stroke="#fff" stroke-width="1.2"/>
+                            <rect x="8" y="2" width="13" height="16" rx="2" stroke="#fff" stroke-width="1.2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-card__icon dash-card__icon--blue">
+                        <svg viewBox="0 0 24 24" fill="none" width="26" height="26">
+                            <rect x="3" y="4" width="13" height="16" rx="2" stroke="#60a5fa" stroke-width="1.8"/>
+                            <rect x="8" y="2" width="13" height="16" rx="2" fill="#0d1830" stroke="#60a5fa" stroke-width="1.8"/>
+                            <path d="M11 8h7M11 12h5" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="dash-card__title">My resumes</h3>
+                    <p class="dash-card__sub">View and manage your uploaded resumes.</p>
+                    <span class="dash-card__cta">View all →</span>
+                </a>
 
-                <article class="feature-slide glass">
-                    <p class="eyebrow">Workflow fit</p>
-                    <h3>Move between tools without losing context</h3>
-                    <p>Score a resume, pick it for an interview, then use the saved conversation and review to decide what to fix next.</p>
-                    <ul class="card-list">
-                        <li>Resume vault with archive support</li>
-                        <li>Results pages tied to uploaded files</li>
-                        <li>Interview setup built from your saved resumes</li>
-                    </ul>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <section class="landing-grid-section">
-        <div class="section-shell landing-grid">
-            <div class="landing-card glass">
-                <p class="eyebrow">Why it feels different</p>
-                <h3>Not just a chatbot, not just a resume checker</h3>
-                <p>This app connects the full prep cycle: resume quality, company context, interview behavior, and saved post-session review.</p>
-            </div>
-            <div class="landing-card glass">
-                <p class="eyebrow">Best use case</p>
-                <h3>Great for role-specific prep</h3>
-                <p>Bring in a real job description and use the scoring plus interview workflow together to find where your story still feels thin.</p>
-            </div>
-            <div class="landing-card glass">
-                <p class="eyebrow">Current strength</p>
-                <h3>Fast iteration</h3>
-                <p>Upload, score, adjust, and re-run quickly so each pass gets tighter before the real interview shows up on your calendar.</p>
             </div>
         </div>
     </section>
-
-    <section class="footer1 footer-cta">
-        <div class="section-shell footer-cta__inner">
-            <div>
-                <p class="eyebrow">Start now</p>
-                <h2>Build the version of your resume and interview story that can survive scrutiny.</h2>
-                <p>Use the score to find weak spots, then stress-test your answers in the mock interview.</p>
-            </div>
-            <div class="hero-cta-row">
-                <a href="/upload" class="btn-primary">Upload resume</a>
-                <a href="/openai" class="btn-outline">Open interviewer</a>
-            </div>
-        </div>
-    </section>
-
-    <script>
-        const featureRail = document.getElementById('feature-rail');
-        const railPrev = document.getElementById('rail-prev');
-        const railNext = document.getElementById('rail-next');
-
-        if (featureRail && railPrev && railNext) {
-            const scrollRail = (direction) => {
-                const amount = Math.min(featureRail.clientWidth * 0.9, 420);
-                featureRail.scrollBy({ left: amount * direction, behavior: 'smooth' });
-            };
-
-            railPrev.addEventListener('click', () => scrollRail(-1));
-            railNext.addEventListener('click', () => scrollRail(1));
-        }
-    </script>
 
     <%- include('partials/footer'); %>
+
+    <% } else { %>
+
+    <!-- ── Logged-out landing page ─────────────────────────── -->
+    <section class="lp-hero">
+        <div class="lp-orb lp-orb--blue"></div>
+        <div class="lp-orb lp-orb--purple"></div>
+        <div class="lp-dot-grid"></div>
+        <div class="section-shell lp-hero__inner">
+            <div class="pill-row lp-hero__pills">
+                <span class="pill">Resume scoring</span>
+                <span class="pill">Mock interviews</span>
+                <span class="pill">AI feedback</span>
+            </div>
+            <h1 class="lp-hero__h1">Train like the interview<br>is already scheduled.</h1>
+            <p class="lp-hero__sub">Upload your resume, pressure-test it against a real job description, then practice with an AI interviewer that adapts to your role, company, and difficulty level.</p>
+            <div class="hero-cta-row lp-hero__ctas">
+                <a href="/upload" class="btn-primary lp-btn-glow">Score your resume</a>
+                <a href="/openai" class="btn-outline lp-btn-outline">Start a mock interview</a>
+            </div>
+
+            <!-- floating product preview card -->
+            <div class="lp-hero__card">
+                <div class="lp-hero__card-glow"></div>
+                <div class="lp-hero__card-top">
+                    <div class="lp-hero__card-dot lp-dot-red"></div>
+                    <div class="lp-hero__card-dot lp-dot-yellow"></div>
+                    <div class="lp-hero__card-dot lp-dot-green"></div>
+                    <span class="lp-hero__card-label">aria — mock interview</span>
+                </div>
+                <div class="lp-hero__chat">
+                    <div class="lp-chat lp-chat--ai">
+                        <span class="lp-chat__name">Aria</span>
+                        <p>Tell me about a time you led a cross-functional project under a tight deadline.</p>
+                    </div>
+                    <div class="lp-chat lp-chat--user">
+                        <span class="lp-chat__name">You</span>
+                        <p>At my last role, I coordinated between design, eng, and PM to ship a feature in two weeks&hellip;</p>
+                    </div>
+                    <div class="lp-chat lp-chat--ai">
+                        <span class="lp-chat__name">Aria</span>
+                        <p>Good start. Can you be more specific about what <em>you</em> personally decided vs. what the team decided?</p>
+                    </div>
+                </div>
+                <div class="lp-hero__card-input">
+                    <div class="lp-fake-input">Type your answer or use voice&hellip;</div>
+                    <div class="lp-fake-send">
+                        <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><path d="M2 8h12M9 3l5 5-5 5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="lp-divider"></div>
+
+    <section class="lp-bento-section">
+        <div class="section-shell">
+            <div class="lp-section-head">
+                <p class="eyebrow">What it does</p>
+                <h2>Everything you need to practice seriously.</h2>
+            </div>
+            <div class="lp-bento">
+
+                <!-- Wide: resume audit with score bars preview -->
+                <article class="lp-bento__card lp-bento__card--wide lp-accent--teal">
+                    <div class="lp-bento__text">
+                        <p class="eyebrow">Resume audit</p>
+                        <h3>See whether your resume is actually convincing</h3>
+                        <p>Score role fit, depth, impact, completeness, structure, and project quality — not just keyword counts.</p>
+                        <ul class="card-list lp-bento__list">
+                            <li>Maximum-strictness scoring by default</li>
+                            <li>Optional web research for company context</li>
+                            <li>Saved scorecards you can revisit later</li>
+                        </ul>
+                        <a href="/upload" class="lp-bento__link">Score a resume →</a>
+                    </div>
+                    <div class="lp-bento__preview">
+                        <div class="lp-score-ui">
+                            <div class="lp-score-ui__head">
+                                <span class="lp-score-ui__file">resume_v3.pdf</span>
+                                <span class="lp-score-ui__badge">78 / 100</span>
+                            </div>
+                            <div class="lp-score-row"><span>Role fit</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:82%; --c:#2dd4bf"></div></div><b>82</b></div>
+                            <div class="lp-score-row"><span>Impact</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:68%; --c:#60a5fa"></div></div><b>68</b></div>
+                            <div class="lp-score-row"><span>Structure</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:91%; --c:#a78bfa"></div></div><b>91</b></div>
+                            <div class="lp-score-row"><span>Depth</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:74%; --c:#2dd4bf"></div></div><b>74</b></div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Interview setup with fake sliders -->
+                <article class="lp-bento__card lp-accent--blue">
+                    <p class="eyebrow">Interview setup</p>
+                    <h3>Tune the interviewer before the first question</h3>
+                    <p>Pick a resume, set the company and role, and control how intense the session feels.</p>
+                    <div class="lp-fake-sliders">
+                        <div class="lp-fake-slider-row">
+                            <span>Difficulty</span>
+                            <div class="lp-fake-track"><div class="lp-fake-fill" style="--w:70%"></div><div class="lp-fake-thumb" style="--pos:70%"></div></div>
+                        </div>
+                        <div class="lp-fake-slider-row">
+                            <span>Seriousness</span>
+                            <div class="lp-fake-track"><div class="lp-fake-fill" style="--w:85%"></div><div class="lp-fake-thumb" style="--pos:85%"></div></div>
+                        </div>
+                        <div class="lp-fake-toggle-row">
+                            <span>Company-aware mode</span>
+                            <div class="lp-fake-toggle lp-fake-toggle--on"></div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Mock interview with chat bubbles -->
+                <article class="lp-bento__card lp-accent--purple">
+                    <p class="eyebrow">Mock interview</p>
+                    <h3>Back-and-forth that feels less scripted</h3>
+                    <p>Aria keeps context from your resume, asks focused questions, and reacts to your actual answers.</p>
+                    <div class="lp-mini-chat">
+                        <div class="lp-mini-bubble lp-mini-bubble--ai">Walk me through your biggest technical challenge last year.</div>
+                        <div class="lp-mini-bubble lp-mini-bubble--user">I rebuilt our auth service from scratch while keeping the old one live&hellip;</div>
+                    </div>
+                </article>
+
+                <!-- Review loop with grade -->
+                <article class="lp-bento__card lp-accent--teal">
+                    <p class="eyebrow">Review loop</p>
+                    <h3>Catch the patterns that keep repeating</h3>
+                    <p>Final interview reviews and archived chats show whether your answers are getting sharper session to session.</p>
+                    <div class="lp-grade-preview">
+                        <span class="lp-grade-letter">B+</span>
+                        <div class="lp-grade-bars">
+                            <div class="lp-grade-bar-row"><span>Clarity</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:80%; --c:#2dd4bf"></div></div></div>
+                            <div class="lp-grade-bar-row"><span>Specificity</span><div class="lp-score-bar"><div class="lp-score-fill" style="--w:62%; --c:#60a5fa"></div></div></div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- CTA card -->
+                <article class="lp-bento__card lp-bento__card--cta">
+                    <div class="lp-cta-card__orb"></div>
+                    <p class="eyebrow">Ready to start?</p>
+                    <h3>Move between tools without losing context</h3>
+                    <p>Score a resume, pick it for an interview, then use the saved conversation to decide what to fix next.</p>
+                    <div style="margin-top: auto; padding-top: 18px;">
+                        <a href="/openai" class="btn-primary lp-btn-glow" style="display:inline-block">Open interviewer</a>
+                    </div>
+                </article>
+
+            </div>
+        </div>
+    </section>
+
+    <div class="lp-divider"></div>
+
+    <section class="lp-stats-section">
+        <div class="section-shell lp-stats-grid">
+            <div class="lp-stat">
+                <span class="lp-stat__val">6</span>
+                <span class="lp-stat__label">scoring dimensions</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat__val">3×</span>
+                <span class="lp-stat__label">difficulty levels</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat__val">∞</span>
+                <span class="lp-stat__label">sessions saved</span>
+            </div>
+            <div class="lp-stat">
+                <span class="lp-stat__val">Aria</span>
+                <span class="lp-stat__label">your AI hiring manager</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="lp-final-cta">
+        <div class="lp-final-cta__orb"></div>
+        <div class="section-shell lp-final-cta__inner">
+            <p class="eyebrow">Start now</p>
+            <h2>Build the version of your resume and interview story that can survive scrutiny.</h2>
+            <p>Use the score to find weak spots, then stress-test your answers in the mock interview.</p>
+            <div class="hero-cta-row">
+                <a href="/upload" class="btn-primary lp-btn-glow">Upload resume</a>
+                <a href="/openai" class="btn-outline lp-btn-outline">Open interviewer</a>
+            </div>
+        </div>
+    </section>
+
+    <%- include('partials/footer'); %>
+
+    <% } %>
 
 </body>
 </html>

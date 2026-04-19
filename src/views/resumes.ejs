@@ -8,101 +8,110 @@
 <body>
 <%- include('partials/navbar'); %>
 
-<section class="results-section" style="text-align:left;">
-    <div class="results-hero" style="align-items:flex-start;">
+<div class="pg-hero">
+    <div class="pg-orb pg-orb--blue"></div>
+    <div class="section-shell pg-hero__inner">
         <div>
             <p class="eyebrow">Your resume vault</p>
-            <h1 style="margin:2px 0 6px;">Recent uploads & fit scores</h1>
-            <p class="muted">See condensed scoring metrics and jump back into details.</p>
+            <h1 class="pg-hero__title">Uploads &amp; fit scores</h1>
+            <p class="pg-hero__sub">Condensed scoring metrics from every upload. Jump back into the full breakdown any time.</p>
         </div>
-        <div class="pill-row">
-            <a href="/upload" class="btn-primary">Upload new resume</a>
-            <a href="/openai" class="btn-outline">Start mock interview</a>
+        <div class="hero-cta-row">
+            <a href="/upload" class="btn-primary lp-btn-glow">Upload new resume</a>
+            <a href="/openai" class="btn-outline lp-btn-outline">Start mock interview</a>
             <% if (showArchived) { %>
-              <a href="/resumes" class="btn-outline">Back to active</a>
+                <a href="/resumes" class="btn-outline lp-btn-outline">Back to active</a>
             <% } else { %>
-              <a href="/resumes?archived=1" class="btn-outline">View archived</a>
+                <a href="/resumes?archived=1" class="btn-outline lp-btn-outline">View archived</a>
             <% } %>
         </div>
     </div>
+</div>
 
-    <% if (resumes && resumes.length) { %>
-        <div class="resumes-grid">
-            <% resumes.forEach(r => {
-                const score = typeof r.fitScore === 'number' ? r.fitScore : null;
-                const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
-                const ringLabel = score === null ? '-' : score;
-                const tier = score === null
-                  ? 'Pending'
-                  : score >= 85 ? 'Excellent' : score >= 70 ? 'Strong' : score >= 50 ? 'Partial' : 'Needs alignment';
-                const breakdown = r.fitRubric || {};
-                const nameLimit = 35;
-                const displayName = r.originalName
-                  ? (r.originalName.length > nameLimit ? r.originalName.slice(0, nameLimit - 1) + '…' : r.originalName)
-                  : 'Untitled resume';
-                const bars = [
-                  { label: 'Fit', val: breakdown.role_fit, max: 25 },
-                  { label: 'Depth', val: breakdown.experience_depth, max: 20 },
-                  { label: 'Impact', val: breakdown.quantified_impact, max: 15 },
-                  { label: 'Proof', val: breakdown.skills_evidence_alignment, max: 10 },
-                  { label: 'Complete', val: breakdown.resume_completeness, max: 10 },
-                ];
-                const pct = (v, m) => (typeof v === 'number' && m ? Math.max(0, Math.min(100, Math.round((v/m)*100))) : 0);
-            %>
-            <div class="resume-card glass">
-                <div class="resume-card__top">
-                    <div class="resume-card__meta">
-                        <h3 class="resume-title" title="<%= r.originalName %>"><%= displayName %></h3>
-                        <p class="muted" style="margin:2px 0 0; font-size:0.9rem;">
-                            <%= r.fitTitle || 'Resume Strength & Role Fit' %> &bull; <%= tier %>
-                        </p>
-                        <div class="pill-row" style="margin-top:6px;">
-                            <span class="pill">Uploaded: <%= r.uploadedAt ? r.uploadedAt.toISOString().slice(0,10) : 'n/a' %></span>
-                            <span class="pill">Size: <%= r.size ? Math.round(r.size/1024) + ' KB' : 'n/a' %></span>
-                            <% if (r.fitCompany) { %><span class="pill">Company: <%= r.fitCompany %></span><% } %>
-                        </div>
-                    </div>
-                    <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= r.ringColor %>; flex-shrink:0;">
-                        <div class="score-ring__fill"></div>
-                        <div class="score-ring__center"><%= ringLabel %></div>
-                    </div>
-                </div>
-
-                <div class="bar-mini-grid" style="margin-top:14px;">
-                    <% bars.forEach(row => { %>
-                        <div class="bar-mini">
-                            <div class="bar-mini__label"><%= row.label %></div>
-                            <div class="bar-mini__track">
-                                <div class="bar-mini__fill" style="--fill:<%= pct(row.val, row.max) %>% ; --bar-color:<%= r.ringColor %>"></div>
+<section class="pg-body">
+    <div class="section-shell">
+        <% if (resumes && resumes.length) { %>
+            <div class="resumes-grid">
+                <% resumes.forEach(r => {
+                    const score = typeof r.fitScore === 'number' ? r.fitScore : null;
+                    const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
+                    const ringLabel = score === null ? '-' : score;
+                    const tier = score === null ? 'Pending'
+                        : score >= 85 ? 'Excellent' : score >= 70 ? 'Strong' : score >= 50 ? 'Partial' : 'Needs alignment';
+                    const breakdown = r.fitRubric || {};
+                    const nameLimit = 35;
+                    const displayName = r.originalName
+                        ? (r.originalName.length > nameLimit ? r.originalName.slice(0, nameLimit - 1) + '…' : r.originalName)
+                        : 'Untitled resume';
+                    const bars = [
+                        { label: 'Fit',      val: breakdown.role_fit,                    max: 25 },
+                        { label: 'Depth',    val: breakdown.experience_depth,             max: 20 },
+                        { label: 'Impact',   val: breakdown.quantified_impact,            max: 15 },
+                        { label: 'Proof',    val: breakdown.skills_evidence_alignment,    max: 10 },
+                        { label: 'Complete', val: breakdown.resume_completeness,          max: 10 },
+                    ];
+                    const pct = (v, m) => (typeof v === 'number' && m ? Math.max(0, Math.min(100, Math.round((v/m)*100))) : 0);
+                %>
+                <div class="resume-card glass">
+                    <div class="resume-card__top">
+                        <div class="resume-card__meta">
+                            <h3 class="resume-title" title="<%= r.originalName %>"><%= displayName %></h3>
+                            <p class="muted" style="margin:2px 0 0; font-size:0.9rem;">
+                                <%= r.fitTitle || 'Resume Strength & Role Fit' %> &bull; <%= tier %>
+                            </p>
+                            <div class="pill-row" style="margin-top:6px;">
+                                <span class="pill">Uploaded: <%= r.uploadedAt ? r.uploadedAt.toISOString().slice(0,10) : 'n/a' %></span>
+                                <span class="pill">Size: <%= r.size ? Math.round(r.size/1024) + ' KB' : 'n/a' %></span>
+                                <% if (r.fitCompany) { %><span class="pill">Company: <%= r.fitCompany %></span><% } %>
                             </div>
-                            <div class="bar-mini__value"><%= row.val ?? '-' %>/<%= row.max %></div>
                         </div>
-                    <% }) %>
-                </div>
+                        <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= r.ringColor %>; flex-shrink:0;">
+                            <div class="score-ring__fill"></div>
+                            <div class="score-ring__center"><%= ringLabel %></div>
+                        </div>
+                    </div>
 
-                <% if (r.fitSummary) { %>
-                    <p class="muted" style="margin:8px 0 0;"><strong>Summary:</strong> <%= r.fitSummary %></p>
-                <% } %>
+                    <div class="bar-mini-grid" style="margin-top:14px;">
+                        <% bars.forEach(row => { %>
+                            <div class="bar-mini">
+                                <div class="bar-mini__label"><%= row.label %></div>
+                                <div class="bar-mini__track">
+                                    <div class="bar-mini__fill" style="--fill:<%= pct(row.val, row.max) %>%; --bar-color:<%= r.ringColor %>"></div>
+                                </div>
+                                <div class="bar-mini__value"><%= row.val ?? '-' %>/<%= row.max %></div>
+                            </div>
+                        <% }) %>
+                    </div>
 
-                <div class="resume-card__actions">
-                    <a href="/results?resumeId=<%= r._id %>" class="btn-outline">View full score</a>
-                    <a href="/upload/preview/<%= r._id %>" class="btn-outline" target="_blank">Preview text</a>
-                    <% if (showArchived) { %>
-                      <form action="/resumes/<%= r._id %>/unarchive" method="POST" class="pill-action">
-                        <button class="pill-btn pill-btn-primary" type="submit">Unarchive</button>
-                      </form>
-                    <% } else { %>
-                      <form action="/resumes/<%= r._id %>/archive" method="POST" class="pill-action">
-                        <button class="pill-btn" type="submit">Archive</button>
-                      </form>
+                    <% if (r.fitSummary) { %>
+                        <p class="muted" style="margin:8px 0 0;"><strong>Summary:</strong> <%= r.fitSummary %></p>
                     <% } %>
+
+                    <div class="resume-card__actions">
+                        <a href="/results?resumeId=<%= r._id %>" class="btn-outline">View full score</a>
+                        <a href="/upload/preview/<%= r._id %>" class="btn-outline" target="_blank">Preview text</a>
+                        <% if (showArchived) { %>
+                            <form action="/resumes/<%= r._id %>/unarchive" method="POST" class="pill-action">
+                                <button class="pill-btn pill-btn-primary" type="submit">Unarchive</button>
+                            </form>
+                        <% } else { %>
+                            <form action="/resumes/<%= r._id %>/archive" method="POST" class="pill-action">
+                                <button class="pill-btn" type="submit">Archive</button>
+                            </form>
+                        <% } %>
+                    </div>
                 </div>
+                <% }) %>
             </div>
-            <% }) %>
-        </div>
-    <% } else { %>
-        <p class="muted" style="text-align:center; margin-top:30px;">No resumes yet. Upload one to see scores.</p>
-    <% } %>
+        <% } else { %>
+            <div class="pg-empty">
+                <p class="eyebrow">Nothing here yet</p>
+                <h3>No resumes uploaded</h3>
+                <p>Upload a resume and paste a job description to get your first score.</p>
+                <a href="/upload" class="btn-primary lp-btn-glow">Upload resume</a>
+            </div>
+        <% } %>
+    </div>
 </section>
 
 <%- include('partials/footer'); %>

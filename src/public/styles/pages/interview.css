@@ -304,61 +304,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(ellipse at 50% 35%, #0c1830 0%, #060c18 55%, #040810 100%);
+    background: radial-gradient(ellipse at 50% 42%, #08152e 0%, #060c18 52%, #040810 100%);
     overflow: hidden;
 }
 
-.avatar-svg {
+/* ── Lottie avatar wrapper ────────────────────── */
+.av-lottie-wrap {
+    position: relative;
+    width: 100%;
     height: 100%;
-    width: auto;
-    max-width: 80%;
-    display: block;
-    animation: av-breathe 5s ease-in-out infinite;
-    transform-origin: center bottom;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Breathing */
-@keyframes av-breathe {
-    0%, 100% { transform: scaleY(1); }
-    50%       { transform: scaleY(1.005); }
+.av-lottie-wrap dotlottie-player {
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
 }
 
-/* Eyelid blink */
-.av-eyelid {
-    transform-box: fill-box;
-    transform-origin: top center;
-    transform: scaleY(0);
-    animation: av-blink 5.2s ease-in-out infinite;
-}
-
-@keyframes av-blink {
-    0%, 90%, 100% { transform: scaleY(0); }
-    93%, 97%      { transform: scaleY(1); }
-    95%           { transform: scaleY(0.1); }
-}
-
-/* Iris glow pulse */
-.av-iris {
-    animation: av-iris-pulse 4s ease-in-out infinite;
-}
-
-@keyframes av-iris-pulse {
-    0%, 100% { opacity: 0.85; }
-    50%       { opacity: 1; }
-}
-
-/* Mouth — controlled by .is-talking on #avatar-container */
-.av-mouth-rest { transition: opacity 0.2s ease; }
-.av-mouth-talk { transition: opacity 0.15s ease; }
-
-#avatar-container.is-talking .av-mouth-rest { opacity: 0; }
-#avatar-container.is-talking .av-mouth-talk {
-    animation: av-talk-flap 0.28s ease-in-out infinite alternate;
-}
-
-@keyframes av-talk-flap {
-    from { opacity: 0.2; }
-    to   { opacity: 1; }
+/* Talking glow pulse on the stage background */
+#avatar-container.is-talking {
+    background: radial-gradient(ellipse at 50% 42%, #0e1e3a 0%, #060c18 52%, #040810 100%);
+    transition: background 0.3s ease;
 }
 
 /* Talking frame ring (absolute overlay on iv-aria-bg) */
@@ -372,13 +341,13 @@
 }
 
 #avatar-container.is-talking .av-talk-ring {
-    border-color: rgba(35, 88, 245, 0.45);
+    border-color: rgba(35, 88, 245, 0.35);
     animation: av-speak-ring 1.2s ease-in-out infinite;
 }
 
 @keyframes av-speak-ring {
     0%, 100% { opacity: 1; }
-    50%       { opacity: 0.45; }
+    50%       { opacity: 0.4; }
 }
 
 /* Aria name tag — bottom-left of stage */

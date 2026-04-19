@@ -7,13 +7,19 @@
 </head>
 <body>
     <%- include('partials/navbar'); %>
-    <section class="form-section" style="padding-top:40px;">
-        <div class="form-container">
-            <h1><%= title || 'Something went wrong' %></h1>
-            <p class="form-subtext"><%= message || 'Please try again.' %></p>
-            <a href="/" class="btn-primary full-width">Return Home</a>
+    <div class="pg-hero">
+        <div class="pg-orb pg-orb--purple"></div>
+        <div class="section-shell pg-hero__inner" style="justify-content: center; text-align: center;">
+            <div>
+                <p class="eyebrow">Error</p>
+                <h1 class="pg-hero__title"><%= title || 'Something went wrong' %></h1>
+                <p class="pg-hero__sub"><%= message || 'Please try again.' %></p>
+                <div style="margin-top: 28px;">
+                    <a href="/" class="btn-primary lp-btn-glow">Return home</a>
+                </div>
+            </div>
         </div>
-    </section>
+    </div>
     <%- include('partials/footer'); %>
 </body>
 </html>

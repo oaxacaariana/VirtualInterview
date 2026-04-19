@@ -38,8 +38,13 @@ const calibrationPoints = [...document.querySelectorAll('.eye-calibration-point'
 let assistantAudioPlaying = false;
 let eyeTracking = null;
 
+const lottiePLayer = document.getElementById('aria-lottie');
+
 const setAvatarTalking = (talking) => {
   avatarContainer?.classList.toggle('is-talking', talking);
+  if (lottiePLayer) {
+    lottiePLayer.setSpeed(talking ? 1.6 : 0.8);
+  }
 };
 
 const tts = createTTS({
