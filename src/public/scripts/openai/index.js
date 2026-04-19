@@ -388,16 +388,20 @@ const addAssistantMessage = (content, options = {}) => {
   chatView.addMessage('assistant', content);
   const shouldShowSubtitle = options.subtitle !== false;
   const shouldSpeak = options.speak !== false;
+  let speechPromise = Promise.resolve();
 
   if (shouldShowSubtitle) {
     setSubtitle(content);
   }
   if (shouldSpeak) {
-    void tts.play(content, {
-      voice: state.context.ttsVoice,
-      instructions: state.context.ttsInstructions,
-    });
+    speechPromise = Promise.resolve(
+      tts.play(content, {
+        voice: state.context.ttsVoice,
+        instructions: state.context.ttsInstructions,
+      })
+    ).catch(() => {});
   }
+  return speechPromise;
 };
 
 const openCoachForFinalReview = () => {
@@ -411,6 +415,15 @@ const openCoachForFinalReview = () => {
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const normalizeMessageText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+const getCompletionSettleDelay = (text = '') => {
+  const normalized = normalizeMessageText(text);
+  if (!normalized) {
+    return 1200;
+  }
+
+  return Math.max(1600, Math.min(5200, 900 + normalized.length * 18));
+};
 
 const watchTurnAnalysis = async ({ chatId, turnNumber, answer, bubble }) => {
   for (let attempt = 0; attempt < 16; attempt += 1) {
@@ -540,14 +553,27 @@ const hydrate = () => {
   return true;
 };
 
-const completeInterview = async (assistantMessage) => {
+const completeInterview = async (assistantMessage, options = {}) => {
   clearInactivityTimer();
   state.interviewComplete = true;
+  syncInteractiveControls();
+  syncSetupModalState();
+
+  let settlePromise = options.settlePromise || Promise.resolve();
+  const settleText = options.settleText || assistantMessage || '';
+
   if (assistantMessage) {
-    addAssistantMessage(assistantMessage);
+    settlePromise = addAssistantMessage(assistantMessage);
     state.history.push({ role: 'assistant', content: assistantMessage });
   }
+
   syncScreenEngagementTracking();
+
+  await Promise.all([
+    Promise.resolve(settlePromise).catch(() => {}),
+    wait(getCompletionSettleDelay(settleText)),
+  ]);
+
   chatView.setInterviewComplete(true);
   syncInteractiveControls();
   syncSetupModalState();
@@ -630,7 +656,7 @@ elements.form.addEventListener('submit', async (event) => {
       state.context.webSignals = data.webSignals || '';
     }
     syncInterviewerPresentation();
-    addAssistantMessage(data.reply);
+    const replyPlayback = addAssistantMessage(data.reply);
     state.history.push({ role: 'assistant', content: data.reply });
     syncScreenEngagementTracking();
     markActivity();
@@ -646,7 +672,10 @@ elements.form.addEventListener('submit', async (event) => {
     }
 
     if (data.interviewComplete) {
-      await completeInterview();
+      await completeInterview(undefined, {
+        settlePromise: replyPlayback,
+        settleText: data.reply,
+      });
     } else {
       scheduleInactivityTimeout();
     }

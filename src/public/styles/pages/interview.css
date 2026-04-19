@@ -1057,6 +1057,10 @@
     transition: filter 0.18s ease, opacity 0.18s ease;
 }
 
+.review-block-final .analysis-panel {
+    min-height: 100%;
+}
+
 .engagement-panel {
     display: grid;
     gap: 12px;
@@ -1204,6 +1208,29 @@
 .review-rail {
     position: sticky;
     top: 18px;
+}
+
+.review-block-final {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 36px);
+    min-height: 0;
+}
+
+.review-block-final .review-tabs {
+    flex-shrink: 0;
+}
+
+.review-block-final .review-tab-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.review-block-final .review-tab-panel.active {
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 6px;
 }
 
 .review-block {
@@ -1477,16 +1504,68 @@
 .final-score-ring {
     width: 118px;
     height: 118px;
+    --ring-thickness: 13px;
 }
 
 .final-score-ring .score-ring__center {
-    inset: 11px;
+    inset: calc(var(--ring-thickness) + 2px);
     font-size: 1.3rem;
+}
+
+.final-score-grade {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+}
+
+.final-score-grade .results-ring {
+    margin: 0;
+}
+
+.final-score-grade__label {
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.06em;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.54);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.12), 0 0 18px rgba(255, 255, 255, 0.08);
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.10);
+    pointer-events: none;
+    user-select: none;
+}
+
+.final-score-grade__letter {
+    display: block;
+    font-size: 2.9rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.1em;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.14), 0 0 32px rgba(255, 255, 255, 0.12);
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.16);
+}
+
+.final-score-grade__letter--wide {
+    font-size: 2rem;
+    letter-spacing: -0.06em;
+    line-height: 1;
 }
 
 .final-score-meta {
     display: grid;
     gap: 6px;
+}
+
+.final-score-note {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    max-width: 56ch;
 }
 
 .final-pill-row {
@@ -1511,8 +1590,7 @@
 
 .final-bar__label {
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-start;
     color: #dbeafe;
     font-size: 0.9rem;
     margin-bottom: 5px;
@@ -1824,5 +1902,14 @@
         width: 30px;
         height: 30px;
         font-size: 0.72rem;
+    }
+
+    .review-block-final {
+        max-height: none;
+    }
+
+    .review-block-final .review-tab-panel.active {
+        overflow-y: visible;
+        padding-right: 0;
     }
 }

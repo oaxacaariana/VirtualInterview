@@ -7,6 +7,38 @@
 </head>
 <body>
 <%- include('partials/navbar'); %>
+<%
+    const normalizeInterviewGrade = (storedGrade, score, reviewedTurns = 0) => {
+        const normalizedStored = (storedGrade || '').toString().trim().toUpperCase();
+        const reviewedTurnCount = Number(reviewedTurns);
+        if (normalizedStored === 'P' || normalizedStored === 'DNF') return 'DNF';
+        if (Number.isFinite(reviewedTurnCount) && reviewedTurnCount > 0 && reviewedTurnCount < 4) return 'DNF';
+        if (['A', 'B', 'C', 'D', 'F'].includes(normalizedStored)) return normalizedStored;
+        const numericScore = Number(score);
+        if (!Number.isFinite(numericScore)) return 'DNF';
+        if (numericScore >= 85) return 'A';
+        if (numericScore >= 70) return 'B';
+        if (numericScore >= 50) return 'C';
+        if (numericScore >= 35) return 'D';
+        return 'F';
+    };
+    const interviewGradeClass = (grade) => {
+        if (grade === 'A') return 'grade-a';
+        if (grade === 'B') return 'grade-b';
+        if (grade === 'C') return 'grade-c';
+        if (grade === 'D') return 'grade-d';
+        if (grade === 'F') return 'grade-f';
+        return 'grade-pending';
+    };
+    const ringColorForGrade = (grade) => {
+        if (grade === 'A') return '#2dd4bf';
+        if (grade === 'B') return '#60a5fa';
+        if (grade === 'C') return '#f0a202';
+        if (grade === 'D') return '#fb923c';
+        if (grade === 'F') return '#f65f5f';
+        return '#94a3b8';
+    };
+%>
 
 <div class="pg-hero">
     <div class="pg-orb pg-orb--purple"></div>
@@ -14,10 +46,15 @@
         <div>
             <p class="eyebrow">Interview archive</p>
             <h1 class="pg-hero__title">Chat logs</h1>
-            <p class="pg-hero__sub">Recent mock interviews with saved setup, grades, and completion status.</p>
+            <p class="pg-hero__sub"><%= showDnf ? 'Did-not-finish interviews kept in a separate archive.' : 'Recent graded mock interviews with saved setup, grades, and completion status.' %></p>
         </div>
         <div class="hero-cta-row">
             <a href="/openai" class="btn-primary lp-btn-glow">New interview</a>
+            <% if (showDnf) { %>
+                <a href="/openai/logs" class="btn-outline lp-btn-outline">Back to graded</a>
+            <% } else { %>
+                <a href="/openai/logs?dnf=1" class="btn-outline lp-btn-outline">View DNF</a>
+            <% } %>
         </div>
     </div>
 </div>
@@ -34,25 +71,13 @@
                           : rawRoleTitle;
                         const rawScore = chat.finalScore?.overallScore;
                         const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
+                        const gradeLetter = normalizeInterviewGrade(chat.finalScore?.grade, score, chat.finalScore?.reviewedTurns);
+                        const gradeClass = interviewGradeClass(gradeLetter);
+                        const gradeIsWide = gradeLetter.length > 1;
                         const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
-                        const ringColor = score === null ? '#555'
-                            : score >= 80 ? '#2dd4bf'
-                            : score >= 65 ? '#60a5fa'
-                            : score >= 50 ? '#f0a202'
-                            : '#f65f5f';
-                        const storedGradeLetter = ((chat.finalScore?.grade || '').toString().trim().charAt(0) || '').toUpperCase();
-                        const derivedGradeLetter = score === null ? 'P'
-                            : score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 50 ? 'C' : score >= 35 ? 'D' : 'F';
-                        const gradeLetter = ['A','B','C','D','F'].includes(storedGradeLetter) ? storedGradeLetter : derivedGradeLetter;
-                        const gradeClass = gradeLetter === 'A' ? 'grade-a'
-                            : gradeLetter === 'B' ? 'grade-b'
-                            : gradeLetter === 'C' ? 'grade-c'
-                            : gradeLetter === 'D' ? 'grade-d'
-                            : gradeLetter === 'F' ? 'grade-f'
-                            : 'grade-pending';
+                        const ringColor = ringColorForGrade(gradeLetter);
                     %>
                     <a href="/openai/logs/<%= chat.chatId %>" class="resume-card glass chat-log-card-link chat-grade-card <%= gradeClass %>">
-                        <div class="chat-grade-card__letter"><%= gradeLetter %></div>
                         <div class="resume-card__top">
                             <div class="resume-card__meta">
                                 <h3 class="resume-title" title="<%= rawRoleTitle %>"><%= displayRoleTitle %></h3>
@@ -65,9 +90,14 @@
                                     <span class="pill">Persona: <%= chat.context?.personaLabel || 'Legacy interviewer' %></span>
                                 </div>
                             </div>
-                            <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= ringColor %>; flex-shrink:0;">
-                                <div class="score-ring__fill"></div>
-                                <div class="score-ring__center"><%= score === null ? '-' : score %></div>
+                            <div class="chat-grade-card__scorebox">
+                                <div class="chat-grade-card__letter-label">GRADE</div>
+                                <div class="score-ring score-ring--open-center profile-ring score-ring-lg chat-grade-ring" style="--score:<%= ringScore %>; --ring-color:<%= ringColor %>; flex-shrink:0;">
+                                    <div class="score-ring__fill"></div>
+                                    <div class="score-ring__center">
+                                        <div class="chat-grade-card__letter <%= gradeIsWide ? 'chat-grade-card__letter--wide' : '' %>"><%= gradeLetter %></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </a>
@@ -76,9 +106,13 @@
         <% } else { %>
             <div class="pg-empty">
                 <p class="eyebrow">Nothing here yet</p>
-                <h3>No chat logs yet</h3>
-                <p>Start a mock interview and complete a session to see it archived here.</p>
-                <a href="/openai" class="btn-primary lp-btn-glow">Start interview</a>
+                <h3><%= showDnf ? 'No DNF interviews' : 'No graded chat logs yet' %></h3>
+                <p><%= showDnf ? 'Interviews that end without a finished grade will appear here.' : 'Start a mock interview and complete a session to see it archived here.' %></p>
+                <% if (showDnf) { %>
+                    <a href="/openai/logs" class="btn-primary lp-btn-glow">Back to graded chats</a>
+                <% } else { %>
+                    <a href="/openai" class="btn-primary lp-btn-glow">Start interview</a>
+                <% } %>
             </div>
         <% } %>
     </div>

@@ -4,6 +4,7 @@
  * Outputs: Persisted and retrieved final interview score documents.
  */
 const { buildInterviewScore } = require('../data/persistence');
+const { normalizeInterviewScoreRecord } = require('./interviewReviewRubric');
 
 const upsertInterviewScore = async ({
   collections,
@@ -53,7 +54,8 @@ const findInterviewScoreByChatId = async ({ collections, userId, chatId }) => {
     throw new Error('interviewScores unavailable');
   }
 
-  return interviewScores.findOne({ userId, chatId });
+  const score = await interviewScores.findOne({ userId, chatId });
+  return normalizeInterviewScoreRecord(score);
 };
 
 module.exports = {

@@ -32,32 +32,36 @@
     <div class="section-shell">
         <% if (resumes && resumes.length) { %>
             <div class="resumes-grid">
-                <% resumes.forEach(r => {
+                <% resumes.forEach((r) => {
                     const score = typeof r.fitScore === 'number' ? r.fitScore : null;
                     const ringScore = score !== null ? (score * 3.6) + 'deg' : '0deg';
-                    const ringLabel = score === null ? '-' : score;
-                    const tier = score === null ? 'Pending'
-                        : score >= 85 ? 'Excellent' : score >= 70 ? 'Strong' : score >= 50 ? 'Partial' : 'Needs alignment';
                     const breakdown = r.fitRubric || {};
                     const nameLimit = 35;
                     const displayName = r.originalName
-                        ? (r.originalName.length > nameLimit ? r.originalName.slice(0, nameLimit - 1) + '…' : r.originalName)
+                        ? (r.originalName.length > nameLimit ? r.originalName.slice(0, nameLimit - 3) + '...' : r.originalName)
                         : 'Untitled resume';
-                    const bars = [
-                        { label: 'Fit',      val: breakdown.role_fit,                    max: 25 },
-                        { label: 'Depth',    val: breakdown.experience_depth,             max: 20 },
-                        { label: 'Impact',   val: breakdown.quantified_impact,            max: 15 },
-                        { label: 'Proof',    val: breakdown.skills_evidence_alignment,    max: 10 },
-                        { label: 'Complete', val: breakdown.resume_completeness,          max: 10 },
-                    ];
-                    const pct = (v, m) => (typeof v === 'number' && m ? Math.max(0, Math.min(100, Math.round((v/m)*100))) : 0);
+                    const bars = (r.scoreRubricConfig || []).slice(0, 5).map((row) => ({
+                        label: row.shortLabel,
+                        val: breakdown[row.key],
+                        max: row.max,
+                    }));
+                    const pct = (v, m) => (typeof v === 'number' && m ? Math.max(0, Math.min(100, Math.round((v / m) * 100))) : 0);
+                    const strengthLabel = (v, m) => {
+                        if (typeof v !== 'number' || !m) return 'Not rated';
+                        const ratio = v / m;
+                        if (ratio >= 0.85) return 'Excellent';
+                        if (ratio >= 0.65) return 'Strong';
+                        if (ratio >= 0.45) return 'Moderate';
+                        if (ratio >= 0.25) return 'Limited';
+                        return 'Weak';
+                    };
                 %>
                 <div class="resume-card glass">
                     <div class="resume-card__top">
                         <div class="resume-card__meta">
                             <h3 class="resume-title" title="<%= r.originalName %>"><%= displayName %></h3>
                             <p class="muted" style="margin:2px 0 0; font-size:0.9rem;">
-                                <%= r.fitTitle || 'Resume Strength & Role Fit' %> &bull; <%= tier %>
+                                <%= r.fitTitle || 'Resume Strength & Role Fit' %> &bull; <%= r.fitLabel %>
                             </p>
                             <div class="pill-row" style="margin-top:6px;">
                                 <span class="pill">Uploaded: <%= r.uploadedAt ? r.uploadedAt.toISOString().slice(0,10) : 'n/a' %></span>
@@ -67,18 +71,18 @@
                         </div>
                         <div class="score-ring profile-ring score-ring-lg" style="--score:<%= ringScore %>; --ring-color:<%= r.ringColor %>; flex-shrink:0;">
                             <div class="score-ring__fill"></div>
-                            <div class="score-ring__center"><%= ringLabel %></div>
+                            <div class="score-ring__center score-ring__center--label"><%= r.fitBadge %></div>
                         </div>
                     </div>
 
                     <div class="bar-mini-grid" style="margin-top:14px;">
-                        <% bars.forEach(row => { %>
+                        <% bars.forEach((row) => { %>
                             <div class="bar-mini">
                                 <div class="bar-mini__label"><%= row.label %></div>
                                 <div class="bar-mini__track">
                                     <div class="bar-mini__fill" style="--fill:<%= pct(row.val, row.max) %>%; --bar-color:<%= r.ringColor %>"></div>
                                 </div>
-                                <div class="bar-mini__value"><%= row.val ?? '-' %>/<%= row.max %></div>
+                                <div class="bar-mini__value"><%= strengthLabel(row.val, row.max) %></div>
                             </div>
                         <% }) %>
                     </div>

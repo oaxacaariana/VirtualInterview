@@ -24,6 +24,7 @@ const {
 } = require('../interviews/chatRepository');
 const { findInterviewScoreByChatId } = require('../interviews/interviewScoreRepository');
 const { ensureChatId } = require('../interviews/interviewService');
+const { isDnfInterviewScore } = require('../interviews/interviewGradeUtils');
 
 const USER_ROLES = ['candidate', 'admin'];
 
@@ -249,6 +250,7 @@ const showUserChats = async (req, res) => {
     });
   }
 
+  const showDnf = req.query?.dnf === '1';
   const userId = toObjectId(targetUser._id);
   const docs = await listRecentChatsForUser({
     collections: req.app.locals.collections,
@@ -263,13 +265,16 @@ const showUserChats = async (req, res) => {
         collections: req.app.locals.collections,
         userId,
         chatId: chat.chatId,
-      }),
-    }))
+        }),
+      }))
   );
+
+  const filteredChats = chats.filter((chat) => isDnfInterviewScore(chat.finalScore) === showDnf);
 
   return res.render('admin-user-chats', {
     targetUser,
-    chats,
+    chats: filteredChats,
+    showDnf,
   });
 };
 

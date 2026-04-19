@@ -9,6 +9,7 @@ const {
   toObjectId,
   listActiveResumesWithScores,
 } = require('../resumes/resumeRepository');
+const { fitLabelForScore, fitBadgeForScore } = require('../resumes/resumeScorePresentation');
 const { loadInterviewContext } = require('./interviewContextService');
 const {
   buildAskMessages,
@@ -72,6 +73,8 @@ const mapResumesForView = async ({ collections, sessionUser }) => {
       _id: file._id,
       originalName: file.originalName,
       fitScore: scoreVal,
+      fitLabel: fitLabelForScore(scoreVal),
+      fitBadge: fitBadgeForScore(scoreVal),
       ringColor: ringColorForScore(scoreVal),
     };
   });
@@ -108,6 +111,8 @@ const startInterviewSession = async ({
       difficulty: input.difficulty,
       complexity: input.complexity,
       interviewComplete: input.interviewComplete,
+      company: input.company,
+      role: input.role,
       backgroundDoc: context.backgroundDoc,
     }),
     max_tokens: 300,
@@ -338,6 +343,7 @@ const finalizeInterview = async ({
         overallScore: existingScore.overallScore,
         letterGrade: existingScore.grade,
         categoryScores: existingScore.rubric || {},
+        rubricWeights: existingScore.rubricWeights || {},
         overallSummary: existingScore.summary || '',
         strongestArea: existingScore.strongestArea || '',
         weakestArea: existingScore.weakestArea || '',

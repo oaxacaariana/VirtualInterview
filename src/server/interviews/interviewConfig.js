@@ -10,13 +10,17 @@ const DEFAULT_PERSONA_ID = 'skeptical-manager';
 const VOICE_OPTIONS = [
   { id: 'alloy', label: 'Alloy' },
   { id: 'ash', label: 'Ash' },
+  { id: 'ballad', label: 'Ballad' },
+  { id: 'cedar', label: 'Cedar' },
   { id: 'coral', label: 'Coral' },
   { id: 'echo', label: 'Echo' },
   { id: 'fable', label: 'Fable' },
+  { id: 'marin', label: 'Marin' },
   { id: 'nova', label: 'Nova' },
   { id: 'onyx', label: 'Onyx' },
   { id: 'sage', label: 'Sage' },
   { id: 'shimmer', label: 'Shimmer' },
+  { id: 'verse', label: 'Verse' },
 ];
 const VOICE_OPTION_IDS = new Set(VOICE_OPTIONS.map((voice) => voice.id));
 
@@ -107,6 +111,44 @@ const PERSONAS = [
     },
     promptStyle:
       'Persona: supportive but exacting interviewer. You sound warm and composed, but you never lower the bar. Give the candidate room to respond, then calmly force precision, evidence, and cleaner reasoning.',
+  },
+  {
+    id: 'empathetic-recruiter',
+    label: 'Empathetic Recruiter',
+    interviewerName: 'Naomi',
+    summary:
+      'Warm, polished, and disarming at first, but still tuned to substance. Great for realistic recruiter-screen energy with a real bar behind it.',
+    chips: ['Warm screen', 'Polished', 'Human'],
+    voice: 'marin',
+    ttsInstructions:
+      'Speak like an empathetic but sharp recruiter. Sound warm, natural, and engaging up front, then slightly more probing when you need specifics. Use smooth conversational inflection and light encouragement without sounding overly cheerful.',
+    operatingLevels: {
+      seriousness: 0.78,
+      style: 0.22,
+      difficulty: 1,
+      complexity: 1,
+    },
+    promptStyle:
+      'Persona: empathetic recruiter. You sound warm, human, and easy to talk to, but you still evaluate substance carefully. Build quick rapport, then test motivation, communication, consistency, and whether the candidate can back up their claims with specifics.',
+  },
+  {
+    id: 'founder-operator',
+    label: 'Founder Operator',
+    interviewerName: 'Rhea',
+    summary:
+      'Fast-moving, decisive, and commercially sharp. Pushes on ownership, urgency, tradeoffs, and whether the candidate can operate without hand-holding.',
+    chips: ['Startup', 'Decisive', 'High ownership'],
+    voice: 'cedar',
+    ttsInstructions:
+      'Speak like a sharp startup founder-interviewer. Sound brisk, decisive, and highly engaged. Keep the pacing energetic, the emphasis intentional, and the tone commercially minded without becoming theatrical.',
+    operatingLevels: {
+      seriousness: 0.92,
+      style: 0.84,
+      difficulty: 1,
+      complexity: 1,
+    },
+    promptStyle:
+      'Persona: founder operator. You are quick, direct, and commercially serious. Focus on execution speed, ownership, prioritization, ambiguity, tradeoffs, and whether the candidate can deliver in a high-accountability environment.',
   },
 ];
 

@@ -6,6 +6,30 @@
 </head>
 <body>
     <%- include('partials/navbar'); %>
+    <%
+        const normalizeInterviewGrade = (storedGrade, score, reviewedTurns = 0) => {
+            const normalizedStored = (storedGrade || '').toString().trim().toUpperCase();
+            const reviewedTurnCount = Number(reviewedTurns);
+            if (normalizedStored === 'P' || normalizedStored === 'DNF') return 'DNF';
+            if (Number.isFinite(reviewedTurnCount) && reviewedTurnCount > 0 && reviewedTurnCount < 4) return 'DNF';
+            if (['A', 'B', 'C', 'D', 'F'].includes(normalizedStored)) return normalizedStored;
+            const numericScore = Number(score);
+            if (!Number.isFinite(numericScore)) return 'DNF';
+            if (numericScore >= 85) return 'A';
+            if (numericScore >= 70) return 'B';
+            if (numericScore >= 50) return 'C';
+            if (numericScore >= 35) return 'D';
+            return 'F';
+        };
+        const ringColorForGrade = (grade) => {
+            if (grade === 'A') return '#2dd4bf';
+            if (grade === 'B') return '#60a5fa';
+            if (grade === 'C') return '#f0a202';
+            if (grade === 'D') return '#fb923c';
+            if (grade === 'F') return '#f65f5f';
+            return '#94a3b8';
+        };
+    %>
 
     <section class="results-section chat-log-page">
         <div class="results-hero chat-log-hero" style="align-items:flex-start;">
@@ -102,43 +126,44 @@
                         <% if (finalScore) { %>
                             <%
                               const overallScore = Number(finalScore.overallScore) || 0;
-                              const ringColor =
-                                overallScore >= 80 ? '#2dd4bf' :
-                                overallScore >= 65 ? '#60a5fa' :
-                                overallScore >= 50 ? '#f0a202' : '#f65f5f';
+                              const finalGrade = normalizeInterviewGrade(finalScore.grade, overallScore, finalScore.reviewedTurns);
+                              const ringColor = ringColorForGrade(finalGrade);
+                              const gradeIsWide = finalGrade.length > 1;
                               const bars = [
-                                ['Relevance', finalScore.rubric?.relevance || 0],
-                                ['STAR', finalScore.rubric?.star || 0],
-                                ['Role fit', finalScore.rubric?.roleAlignment || 0],
-                                ['Clarity', finalScore.rubric?.clarity || 0],
-                                ['Confidence', finalScore.rubric?.confidence || 0],
+                                { label: 'Role fit', score: finalScore.rubric?.roleAlignment || 0 },
+                                { label: 'Relevance', score: finalScore.rubric?.relevance || 0 },
+                                { label: 'Structured answers', score: finalScore.rubric?.star || 0 },
+                                { label: 'Clarity', score: finalScore.rubric?.clarity || 0 },
+                                { label: 'Confidence', score: finalScore.rubric?.confidence || 0 },
                               ];
                             %>
                             <div class="final-score-shell">
                                 <div class="final-score-hero">
-                                    <div class="score-ring results-ring final-score-ring" style="--score:<%= overallScore * 3.6 %>deg; --ring-color:<%= ringColor %>;">
-                                        <div class="score-ring__fill"></div>
-                                        <div class="score-ring__center"><%= overallScore %></div>
+                                    <div class="final-score-grade">
+                                        <div class="final-score-grade__label">GRADE</div>
+                                        <div class="score-ring score-ring--open-center results-ring final-score-ring" style="--score:<%= overallScore * 3.6 %>deg; --ring-color:<%= ringColor %>;">
+                                            <div class="score-ring__fill"></div>
+                                            <div class="score-ring__center">
+                                                <div class="final-score-grade__letter <%= gradeIsWide ? 'final-score-grade__letter--wide' : '' %>"><%= finalGrade %></div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="final-score-meta">
-                                        <p class="coach-card__eyebrow">Final grade</p>
-                                        <h4><%= finalScore.grade || 'Pending' %></h4>
                                         <p class="muted"><%= finalScore.summary || 'No summary saved.' %></p>
+                                        <p class="final-score-note">Structured answers uses the STAR format: situation, task, action, result. Role fit and relevance count more than confidence in the final grade.</p>
                                     </div>
                                 </div>
 
                                 <div class="final-pill-row">
                                     <span class="final-pill">Strongest: <%= finalScore.strongestArea || 'n/a' %></span>
                                     <span class="final-pill">Weakest: <%= finalScore.weakestArea || 'n/a' %></span>
-                                    <span class="final-pill">Turns reviewed: <%= finalScore.reviewedTurns || turns.length %></span>
                                 </div>
 
                                 <div class="final-bars">
-                                    <% bars.forEach(([label, score]) => { %>
+                                    <% bars.forEach(({ label, score }) => { %>
                                         <div class="final-bar">
                                             <div class="final-bar__label">
                                                 <span><%= label %></span>
-                                                <span><%= score %>/10</span>
                                             </div>
                                             <div class="final-bar__track">
                                                 <div class="final-bar__fill" style="--fill:<%= Math.max(0, Math.min(100, Number(score) * 10)) %>%"></div>

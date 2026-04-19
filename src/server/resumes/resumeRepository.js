@@ -53,6 +53,7 @@ const hydrateResume = (resumeDoc, scoreDoc) => {
     ...resumeDoc,
     latestScore: scoreDoc || null,
     fitScore,
+    fitRubricVersion: scoreDoc?.rubricVersion || 1,
     fitSummary: scoreDoc?.summary || '',
     fitPositives: scoreDoc?.positives || [],
     fitNegatives: scoreDoc?.negatives || [],
