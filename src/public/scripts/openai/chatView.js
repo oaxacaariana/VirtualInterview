@@ -23,18 +23,47 @@ const verdictClass = (verdict) => {
   return 'is-mixed';
 };
 
+const formatDuration = (ms = 0) => {
+  const totalSeconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${minutes}m ${seconds}s`;
+};
+
 export const createChatView = (elements) => {
   const {
     chatLog,
     analysisPanel,
     finalScorePanel,
+    liveEngagementPanel,
+    finalEngagementPanel,
     statusDot,
     promptInput,
     sendBtn,
     endBtn,
     form,
     analysisPrivacyBtn,
+    toggleChatBtn,
+    toggleCoachBtn,
+    coachTabLive,
+    coachTabFinal,
+    coachTabPanelLive,
+    coachTabPanelFinal,
+    completeBanner,
   } = elements;
+  let draftBubble = null;
+  let draftTextNode = null;
+  let draftMetaNode = null;
+  let screenEngagementMetric = null;
 
   const setStatus = (label, active = false) => {
     statusDot.textContent = label;
@@ -43,11 +72,91 @@ export const createChatView = (elements) => {
 
   const setCoachBlurred = (blurred) => {
     analysisPanel.classList.toggle('is-blurred', blurred);
+    liveEngagementPanel?.classList.toggle('is-blurred', blurred);
     chatLog.classList.toggle('coach-inline-blurred', blurred);
     if (analysisPrivacyBtn) {
       analysisPrivacyBtn.textContent = blurred ? 'Show coach' : 'Blur coach';
       analysisPrivacyBtn.classList.toggle('active', blurred);
     }
+  };
+
+  const renderEngagementMetric = (panel, metric, { compact = false } = {}) => {
+    if (!panel) return;
+
+    if (!metric) {
+      panel.innerHTML = `
+        <div class="coach-card coach-card-engagement is-empty">
+          <p class="coach-card__eyebrow">Screen engagement</p>
+          <p class="muted">Turn on camera tracking to see the on-screen gaze test here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const headline =
+      typeof metric.scorePct === 'number'
+        ? `${metric.scorePct}% on-screen`
+        : metric.calibrationActive
+          ? 'Calibrating tracking'
+          : metric.enabled
+            ? metric.calibrated
+              ? 'Waiting for answer window'
+              : 'Calibrate for accuracy'
+            : 'Tracking unavailable';
+
+    const summary = metric.calibrationActive
+      ? 'Click each calibration point while looking directly at it.'
+      : !metric.enabled
+        ? 'Camera + eye tracking need to be on before this test-only signal can run.'
+        : metric.status === 'paused'
+          ? 'The metric only scores answer windows, so it pauses while the interviewer is talking.'
+          : metric.status === 'unknown'
+            ? 'Tracking is live, but the current gaze signal is uncertain or stale.'
+            : 'Broad on-screen gaze test. This does not require staring at one exact point.';
+
+    panel.innerHTML = `
+      <div class="coach-card coach-card-engagement ${metric.status === 'off' ? 'is-missed' : metric.status === 'on' ? 'is-focused' : ''}">
+        <div class="coach-card__head">
+          <div>
+            <p class="coach-card__eyebrow">Screen engagement</p>
+            <h4>${escapeHtml(headline)}</h4>
+          </div>
+          <span class="engagement-state-pill">${escapeHtml(metric.calibrationActive ? 'Calibrating' : metric.statusLabel || 'Idle')}</span>
+        </div>
+        <p class="coach-card__summary">${escapeHtml(summary)}</p>
+        <div class="engagement-stat-grid ${compact ? 'is-compact' : ''}">
+          <div class="engagement-stat">
+            <span>On-screen</span>
+            <strong>${escapeHtml(formatDuration(metric.onScreenMs))}</strong>
+          </div>
+          <div class="engagement-stat">
+            <span>Off-screen</span>
+            <strong>${escapeHtml(formatDuration(metric.offScreenMs))}</strong>
+          </div>
+          <div class="engagement-stat">
+            <span>Unknown</span>
+            <strong>${escapeHtml(formatDuration(metric.unknownMs))}</strong>
+          </div>
+        </div>
+        <p class="engagement-note">Test only. This is not included in your saved interview grade yet.</p>
+      </div>
+    `;
+  };
+
+  const setScreenEngagementMetric = (metric) => {
+    screenEngagementMetric = metric;
+    renderEngagementMetric(liveEngagementPanel, screenEngagementMetric);
+    renderEngagementMetric(finalEngagementPanel, screenEngagementMetric, { compact: true });
+  };
+
+  const setCoachTab = (tab) => {
+    const showFinal = tab === 'final';
+    coachTabLive?.classList.toggle('is-active', !showFinal);
+    coachTabLive?.setAttribute('aria-selected', String(!showFinal));
+    coachTabFinal?.classList.toggle('is-active', showFinal);
+    coachTabFinal?.setAttribute('aria-selected', String(showFinal));
+    coachTabPanelLive?.classList.toggle('is-active', !showFinal);
+    coachTabPanelFinal?.classList.toggle('is-active', showFinal);
   };
 
   const setIdleAnalysis = () => {
@@ -199,6 +308,14 @@ export const createChatView = (elements) => {
           <p class="coach-card__eyebrow">Interview pattern</p>
           <p>${escapeHtml(review.patterns)}</p>
         </div>
+
+        <div class="coach-card final-score-next">
+          <p class="coach-card__eyebrow">Next step</p>
+          <p>Interview complete. Review the saved transcript any time from your history.</p>
+          <div class="final-score-actions">
+            <a href="/openai/logs" class="btn-outline">Open chat history</a>
+          </div>
+        </div>
       </div>
     `;
   };
@@ -242,6 +359,42 @@ export const createChatView = (elements) => {
     return bubble;
   };
 
+  const ensureDraftBubble = () => {
+    if (draftBubble) {
+      return draftBubble;
+    }
+
+    draftBubble = document.createElement('div');
+    draftBubble.className = 'bubble user bubble-draft';
+    draftBubble.title = 'Live speech draft';
+
+    draftTextNode = document.createElement('div');
+    draftTextNode.className = 'bubble__text';
+    draftBubble.appendChild(draftTextNode);
+
+    draftMetaNode = document.createElement('div');
+    draftMetaNode.className = 'bubble-draft__meta';
+    draftBubble.appendChild(draftMetaNode);
+
+    chatLog.appendChild(draftBubble);
+    return draftBubble;
+  };
+
+  const setDraftMessage = ({ text = '', status = '' } = {}) => {
+    const bubble = ensureDraftBubble();
+    draftTextNode.textContent = text || 'Listening...';
+    draftMetaNode.textContent = status || 'Live transcription';
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return bubble;
+  };
+
+  const clearDraftMessage = () => {
+    draftBubble?.remove();
+    draftBubble = null;
+    draftTextNode = null;
+    draftMetaNode = null;
+  };
+
   const attachInlineAnalysis = (bubble, analysis) => {
     if (!bubble || !analysis) return;
 
@@ -260,6 +413,7 @@ export const createChatView = (elements) => {
   };
 
   const clearMessages = () => {
+    clearDraftMessage();
     chatLog.innerHTML = '';
   };
 
@@ -267,24 +421,45 @@ export const createChatView = (elements) => {
     promptInput.disabled = complete;
     sendBtn.disabled = complete;
     endBtn.disabled = complete;
+    if (toggleChatBtn) {
+      toggleChatBtn.disabled = complete;
+      toggleChatBtn.classList.toggle('is-disabled', complete);
+      toggleChatBtn.classList.remove('is-active');
+    }
+    if (toggleCoachBtn) {
+      toggleCoachBtn.classList.toggle('is-finished', complete);
+    }
     form.classList.toggle('hidden', complete);
+    completeBanner?.classList.toggle('hidden', !complete);
     if (complete) {
-      setStatus('Complete');
+      setCoachTab('final');
+      setStatus('Interview complete');
     } else {
+      completeBanner?.classList.add('hidden');
+      setCoachTab('live');
       setStatus('Ready');
       endBtn.disabled = false;
     }
   };
 
+  coachTabLive?.addEventListener('click', () => setCoachTab('live'));
+  coachTabFinal?.addEventListener('click', () => setCoachTab('final'));
+
   setIdleAnalysis();
   setFinalPlaceholder();
+  setCoachTab('live');
+  setScreenEngagementMetric(null);
 
   return {
     addMessage,
     attachInlineAnalysis,
+    clearDraftMessage,
     clearMessages,
+    setDraftMessage,
     setCoachBlurred,
+    setCoachTab,
     setStatus,
+    setScreenEngagementMetric,
     setInterviewComplete,
     showTurnAnalysis,
     showFinalReview,

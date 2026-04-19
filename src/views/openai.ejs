@@ -9,7 +9,15 @@
     <script src="/scripts/eye-tracking/face-api.min.js"></script>
 </head>
 <body>
+    <% const safeInterviewConfig = typeof interviewConfig === 'undefined' ? {} : interviewConfig; %>
     <%- include('partials/navbar'); %>
+    <script id="interview-config" type="application/json"><%- JSON.stringify(safeInterviewConfig) %></script>
+    <script>
+        const interviewConfigNode = document.getElementById('interview-config');
+        window.__INTERVIEW_CONFIG__ = interviewConfigNode
+            ? JSON.parse(interviewConfigNode.textContent || '{}')
+            : {};
+    </script>
 
     <div class="iv-shell">
         <div class="iv-stage">
@@ -27,8 +35,8 @@
                 </div>
 
                 <div class="iv-aria-nametag">
-                    <span class="iv-aria-name">Aria</span>
-                    <span class="stage-badge">Hiring Manager</span>
+                    <span class="iv-aria-name" id="iv-interviewer-name">Dorian</span>
+                    <span class="stage-badge" id="iv-interviewer-badge">Skeptical Manager</span>
                 </div>
 
                 <div class="av-talk-ring"></div>
@@ -75,6 +83,52 @@
                 <p id="iv-subtitle-text" class="iv-subtitle-text"></p>
             </div>
 
+            <div id="interview-complete-banner" class="iv-complete-banner hidden" aria-live="polite">
+                <p class="eyebrow">Interview finished</p>
+                <h3>Final breakdown ready</h3>
+                <p>Your practice session is closed. Review the final score, inspect the chat history, or start a new interview.</p>
+                <div class="iv-complete-actions">
+                    <a href="/openai/logs" class="btn-outline">View chat history</a>
+                    <button type="button" id="interview-complete-new-chat" class="btn-primary">Start new chat</button>
+                </div>
+            </div>
+
+            <div id="interview-boot-overlay" class="iv-boot-overlay hidden" aria-live="polite" aria-hidden="true">
+                <div class="iv-boot-card">
+                    <div class="iv-boot-spinner" aria-hidden="true"></div>
+                    <p class="eyebrow">Preparing interview</p>
+                    <h3 id="interview-boot-title">Building your first prompt</h3>
+                    <p id="interview-boot-text">We are reading your resume, pulling company context, and shaping Aria's background so the opener feels researched instead of generic.</p>
+                    <div class="iv-boot-steps" aria-hidden="true">
+                        <span>Resume context</span>
+                        <span>Company research</span>
+                        <span>Interviewer background</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="eye-calibration-overlay" class="eye-calibration-overlay hidden" aria-hidden="true">
+                <div class="eye-calibration-copy">
+                    <p class="eyebrow">Eye calibration</p>
+                    <h3>Click each point while looking directly at it</h3>
+                    <p>Use this to improve tracking drift. Each point needs 5 clicks before it locks in.</p>
+                    <div class="eye-calibration-actions">
+                        <button type="button" id="eye-calibration-cancel" class="btn-outline">Cancel</button>
+                    </div>
+                </div>
+                <div class="eye-calibration-surface" aria-hidden="true">
+                    <button type="button" class="eye-calibration-point" data-point="1">1</button>
+                    <button type="button" class="eye-calibration-point" data-point="2">2</button>
+                    <button type="button" class="eye-calibration-point" data-point="3">3</button>
+                    <button type="button" class="eye-calibration-point" data-point="4">4</button>
+                    <button type="button" class="eye-calibration-point" data-point="5">5</button>
+                    <button type="button" class="eye-calibration-point" data-point="6">6</button>
+                    <button type="button" class="eye-calibration-point" data-point="7">7</button>
+                    <button type="button" class="eye-calibration-point" data-point="8">8</button>
+                    <button type="button" class="eye-calibration-point" data-point="9">9</button>
+                </div>
+            </div>
+
             <aside class="iv-side-panel" id="iv-chat-panel" aria-hidden="true">
                 <div class="iv-panel-head">
                     <div>
@@ -87,7 +141,7 @@
             </aside>
 
             <aside class="iv-side-panel iv-coach-side" id="iv-coach-panel" aria-hidden="true">
-                <div class="iv-panel-head">
+                <div class="iv-panel-head iv-panel-head--coach">
                     <div>
                         <p class="eyebrow" style="margin-bottom:2px;">Response coach</p>
                         <h3 style="margin:0; font-size:1.05rem;">Live read</h3>
@@ -99,15 +153,18 @@
                     </div>
                 </div>
                 <div class="iv-panel-scroll">
-                    <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
-                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(148,163,184,0.1);">
-                        <div class="iv-panel-head" style="margin-bottom:10px;">
-                            <div>
-                                <p class="eyebrow" style="margin-bottom:2px;">Interview score</p>
-                                <h3 style="margin:0; font-size:1.05rem;">Final breakdown</h3>
-                            </div>
-                            <span class="review-badge review-badge-score">Final</span>
-                        </div>
+                    <div class="coach-tabs" role="tablist" aria-label="Coach views">
+                        <button type="button" id="coach-tab-live" class="coach-tab is-active" role="tab" aria-selected="true" aria-controls="coach-tabpanel-live">Live coach</button>
+                        <button type="button" id="coach-tab-final" class="coach-tab" role="tab" aria-selected="false" aria-controls="coach-tabpanel-final">Final breakdown</button>
+                    </div>
+
+                    <div id="coach-tabpanel-live" class="coach-tab-panel is-active" role="tabpanel" aria-labelledby="coach-tab-live">
+                        <div id="live-engagement-panel" class="engagement-panel"></div>
+                        <div id="analysis-panel" class="analysis-panel" style="min-height:120px;"></div>
+                    </div>
+
+                    <div id="coach-tabpanel-final" class="coach-tab-panel" role="tabpanel" aria-labelledby="coach-tab-final">
+                        <div id="final-engagement-panel" class="engagement-panel"></div>
                         <div id="final-score-panel" class="final-score-panel"></div>
                     </div>
                 </div>
@@ -125,6 +182,7 @@
                     </svg>
                     Audio
                 </button>
+                <span class="iv-audio-note">AI voice</span>
                 <button type="button" id="iv-toggle-camera" class="iv-icon-btn is-active" title="Turn camera off">
                     <svg class="cam-btn-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
                         <rect x="1" y="5" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/>
@@ -132,6 +190,14 @@
                         <line class="cam-off-slash" x1="2" y1="18" x2="18" y2="2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                     </svg>
                     Camera
+                </button>
+                <button type="button" id="iv-recalibrate" class="iv-icon-btn" title="Calibrate eye tracking">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
+                        <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/>
+                        <circle cx="10" cy="10" r="1.4" fill="currentColor"/>
+                        <path d="M10 1.8v2.1M10 16.1v2.1M18.2 10h-2.1M3.9 10H1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Calibrate
                 </button>
                 <span id="mic-status" class="muted" style="font-size:0.82rem;"></span>
             </div>
@@ -148,12 +214,13 @@
                     </svg>
                     Chat
                 </button>
-                <button type="button" id="iv-toggle-coach" class="iv-icon-btn" title="Toggle coach">
+                <button type="button" id="iv-toggle-coach" class="iv-icon-btn iv-icon-btn-coach" title="Toggle coach">
                     <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="15" height="15" aria-hidden="true">
                         <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.8"/>
                         <path d="M10 7v4M10 14.5v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                     Coach
+                    <span class="iv-btn-badge">Key</span>
                 </button>
                 <button type="button" id="end-btn" class="btn-danger" style="padding:8px 16px; color:#fff;">End</button>
             </div>
@@ -167,6 +234,7 @@
                     <p class="eyebrow">Interview setup</p>
                     <h3 id="context-modal-title">Create new chat</h3>
                     <p id="context-modal-subtitle" class="muted">Choose the resume, tune the interviewer, and launch.</p>
+                    <p id="context-modal-feedback" class="context-modal-feedback hidden" role="alert"></p>
                 </div>
                 <button id="close-modal" class="btn-primary modal-close-btn">Close</button>
             </div>
@@ -180,6 +248,27 @@
                             <label>Target role / title</label>
                             <input type="text" id="ctx-role" maxlength="200" placeholder="e.g., Senior Backend Engineer">
 
+                            <div class="setup-card setup-card-subtle">
+                                <div class="setup-card__head">
+                                    <div>
+                                        <p class="eyebrow">Interview mode</p>
+                                        <h4>Choose how the interviewer behaves</h4>
+                                    </div>
+                                </div>
+                                <div class="mode-card-grid">
+                                    <label class="mode-card">
+                                        <input type="radio" name="ctx-mode" id="ctx-mode-operating" value="operating" checked>
+                                        <span class="mode-card__title">Operating mode</span>
+                                        <span class="mode-card__copy">Maximum scrutiny, hardest grading, and no buzzword leniency.</span>
+                                    </label>
+                                    <label class="mode-card">
+                                        <input type="radio" name="ctx-mode" id="ctx-mode-crazy" value="crazy">
+                                        <span class="mode-card__title">Crazy mode</span>
+                                        <span class="mode-card__copy">Experimental and playful. Sliders and custom tone unlock here.</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="setup-switches">
                                 <label class="switch-row">
                                     <span>
@@ -191,29 +280,78 @@
                                         <span class="switch-ui"></span>
                                     </span>
                                 </label>
-
-                                <label class="switch-row">
-                                    <span>
-                                        <strong>Crazy mode</strong>
-                                        <small class="muted">Playful, parody-heavy interviewer tone.</small>
-                                    </span>
-                                    <span class="switch">
-                                        <input type="checkbox" id="ctx-silly">
-                                        <span class="switch-ui"></span>
-                                    </span>
-                                </label>
                             </div>
 
-                            <div id="custom-tone-block" class="hidden">
-                                <label for="ctx-custom-tone">Additional instructions (crazy mode only)</label>
-                                <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                            <div id="operating-mode-block" class="setup-note-card">
+                                <p class="eyebrow">Operating mode locks</p>
+                                <h4>High scrutiny is fixed</h4>
+                                <p class="muted">Difficulty, complexity, and grading strictness are pinned high. Personalities change delivery and voice, but not the bar.</p>
+                                <div class="pill-row" style="margin-top:10px;">
+                                    <span class="pill">Difficulty: max</span>
+                                    <span class="pill">Complexity: max</span>
+                                    <span class="pill">Grading: harsh</span>
+                                </div>
                             </div>
+
                         </div>
+                    </div>
 
-                        <div class="setup-card">
-                            <div class="slider-stack">
-                                <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
-                                <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
+                    <div class="setup-column">
+                        <div id="persona-mode-block" class="setup-card">
+                            <div class="setup-card__head">
+                                <div>
+                                    <p class="eyebrow">Interviewer personality</p>
+                                    <h4>Select your interviewer</h4>
+                                </div>
+                                <p class="muted">Voice and delivery change. Operating mode keeps the same hard bar.</p>
+                            </div>
+                            <div class="persona-card-grid">
+                                <% (safeInterviewConfig?.personas || []).forEach(function(persona) { %>
+                                    <div class="persona-card" data-persona-id="<%= persona.id %>">
+                                        <div class="persona-card__head">
+                                            <div>
+                                                <h4><%= persona.label %></h4>
+                                                <p class="muted"><%= persona.interviewerName %></p>
+                                            </div>
+                                            <span class="pill"><%= persona.voice %></span>
+                                        </div>
+                                        <p class="persona-card__copy"><%= persona.summary %></p>
+                                        <div class="pill-row">
+                                            <% (persona.chips || []).forEach(function(chip) { %>
+                                                <span class="pill"><%= chip %></span>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            </div>
+                            <input type="hidden" id="ctx-persona" value="">
+                        </div>
+                            <div id="crazy-mode-block" class="setup-card hidden">
+                                <div class="setup-card__head">
+                                    <div>
+                                        <p class="eyebrow">Crazy tuning</p>
+                                        <h4>Adjust the chaos</h4>
+                                </div>
+                                <p class="muted">Unlocked only in crazy mode.</p>
+                            </div>
+
+                                <div id="custom-tone-block">
+                                    <label for="ctx-custom-tone">Additional instructions</label>
+                                    <textarea id="ctx-custom-tone" rows="2" maxlength="200" placeholder="E.g., &quot;Channel Sherlock Holmes&quot; or &quot;Sound like a pirate&quot;" disabled></textarea>
+                                </div>
+
+                                <div>
+                                    <label for="ctx-voice">AI voice</label>
+                                    <select id="ctx-voice">
+                                        <% (safeInterviewConfig?.voiceOptions || []).forEach(function(voice) { %>
+                                            <option value="<%= voice.id %>"><%= voice.label %></option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+
+                                <div class="slider-stack">
+                                    <label for="ctx-seriousness">Seriousness <span id="seriousness-val" class="slider-val"></span></label>
+                                    <input type="range" id="ctx-seriousness" min="0" max="1" step="0.01" value="0.5">
 
                                 <label for="ctx-style">Professionalism style <span id="style-val" class="slider-val"></span></label>
                                 <input type="range" id="ctx-style" min="0" max="1" step="0.01" value="0.5">
@@ -226,33 +364,31 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="setup-column">
-                        <div class="setup-card">
-                            <div class="setup-card__head">
-                                <div>
-                                    <p class="eyebrow">Resume source</p>
-                                    <h4>Select resume</h4>
-                                </div>
-                                <p class="muted">Used for interview context and grading.</p>
-                            </div>
-                            <div class="resume-card-grid">
-                                <% (resumes || []).forEach(function(r) { %>
-                                  <div class="resume-card" data-resume-id="<%= r._id %>">
-                                    <div class="resume-card__top">
-                                      <h4><%= r.originalName %></h4>
-                                      <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
-                                        <div class="score-ring__fill"></div>
-                                        <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
-                                      </div>
-                                    </div>
-                                    <p class="muted">Tap to select</p>
-                                  </div>
-                                <% }); %>
-                            </div>
-                            <input type="hidden" id="ctx-resume" value="">
+                <div class="setup-card setup-card-span">
+                    <div class="setup-card__head">
+                        <div>
+                            <p class="eyebrow">Resume source</p>
+                            <h4>Select resume</h4>
                         </div>
+                        <p class="muted">Used for interview context and grading.</p>
                     </div>
+                    <div class="resume-card-grid resume-card-grid-wide">
+                        <% (resumes || []).forEach(function(r) { %>
+                          <div class="resume-card" data-resume-id="<%= r._id %>">
+                            <div class="resume-card__top">
+                              <h4><%= r.originalName %></h4>
+                              <div class="score-ring profile-ring" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>;">
+                                <div class="score-ring__fill"></div>
+                                <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                              </div>
+                            </div>
+                            <p class="muted">Tap to select</p>
+                          </div>
+                        <% }); %>
+                    </div>
+                    <input type="hidden" id="ctx-resume" value="">
                 </div>
 
                 <div class="modal-footer">

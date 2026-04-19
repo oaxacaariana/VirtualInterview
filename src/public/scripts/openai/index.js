@@ -10,6 +10,10 @@ import { createInitialState, createEmptyContext, replaceState } from './state.js
 import { saveState, loadState, clearState } from './storage.js';
 import { createVoiceInput } from './voiceInput.js';
 import { createTTS } from './tts.js';
+import { createEyeTracking } from './eyeTracking.js';
+
+const interviewConfig = window.__INTERVIEW_CONFIG__ || {};
+const personaById = Object.fromEntries((interviewConfig.personas || []).map((persona) => [persona.id, persona]));
 
 const avatarContainer = document.getElementById('avatar-container');
 const cameraFeed = document.getElementById('camera-feed');
@@ -22,7 +26,17 @@ const toggleChatBtn = document.getElementById('iv-toggle-chat');
 const toggleCoachBtn = document.getElementById('iv-toggle-coach');
 const eyeTrackingSpot = document.getElementById('eye-tracking-spot');
 const cameraToggleBtn = document.getElementById('iv-toggle-camera');
+const recalibrateBtn = document.getElementById('iv-recalibrate');
 const muteBtn = document.getElementById('iv-toggle-mute');
+const interviewBootOverlay = document.getElementById('interview-boot-overlay');
+const interviewerNameEl = document.getElementById('iv-interviewer-name');
+const interviewerBadgeEl = document.getElementById('iv-interviewer-badge');
+const calibrationOverlay = document.getElementById('eye-calibration-overlay');
+const calibrationCancelBtn = document.getElementById('eye-calibration-cancel');
+const calibrationPoints = [...document.querySelectorAll('.eye-calibration-point')];
+
+let assistantAudioPlaying = false;
+let eyeTracking = null;
 
 const lottiePLayer = document.getElementById('aria-lottie');
 
@@ -34,8 +48,16 @@ const setAvatarTalking = (talking) => {
 };
 
 const tts = createTTS({
-  onStart: () => setAvatarTalking(true),
-  onEnd: () => setAvatarTalking(false),
+  onStart: () => {
+    assistantAudioPlaying = true;
+    setAvatarTalking(true);
+    eyeTracking?.syncMeasurementWindow();
+  },
+  onEnd: () => {
+    assistantAudioPlaying = false;
+    setAvatarTalking(false);
+    eyeTracking?.syncMeasurementWindow();
+  },
 });
 
 const syncMuteBtn = () => {
@@ -120,232 +142,6 @@ document.getElementById('iv-coach-close')?.addEventListener('click', () => {
   toggleCoachBtn?.classList.remove('is-active');
 });
 
-const promptForEyeTracking = async () => {
-  if (!window.webgazer) {
-    return false;
-  }
-
-  const cachedChoice = sessionStorage.getItem('iv-eye-tracking-choice');
-  if (cachedChoice) {
-    return cachedChoice === 'yes';
-  }
-
-  const savedChoice = localStorage.getItem('iv-eye-tracking');
-  if (savedChoice === 'yes' || savedChoice === 'on') {
-    sessionStorage.setItem('iv-eye-tracking-choice', 'yes');
-    return true;
-  }
-  if (savedChoice === 'no' || savedChoice === 'off') {
-    sessionStorage.setItem('iv-eye-tracking-choice', 'no');
-    return false;
-  }
-
-  if (window.Swal?.fire) {
-    const result = await window.Swal.fire({
-      title: 'Track Eye Movement',
-      text: 'Would you like to track eye movement during your interview to receive feedback on your eye contact?',
-      showCancelButton: true,
-      showConfirmButton: true,
-      cancelButtonText: 'No',
-      confirmButtonText: 'Yes',
-      background: 'linear-gradient(180deg, rgba(20,23,32,0.96), rgba(15,15,16,0.98))',
-      color: '#dbeafe',
-      titleColor: '#93c5fd',
-      customClass: {
-        confirmButton: 'swal-btn-confirm',
-        cancelButton: 'swal-btn-cancel',
-      },
-      buttonsStyling: false,
-    });
-
-    sessionStorage.setItem('iv-eye-tracking-choice', result.isConfirmed ? 'yes' : 'no');
-    return result.isConfirmed;
-  }
-
-  const accepted = window.confirm(
-    'Track eye movement during your interview to receive feedback on your eye contact?'
-  );
-  sessionStorage.setItem('iv-eye-tracking-choice', accepted ? 'yes' : 'no');
-  return accepted;
-};
-
-let cameraStream = null;
-let cameraEnabled = localStorage.getItem('iv-camera') !== 'off';
-let eyeTrackingEnabled = localStorage.getItem('iv-eye-tracking') !== 'off';
-let webgazerInitialized = false;
-let eyeContactTotal = 0;
-let eyeContactHits = 0;
-
-const setEyeTrackingState = (active, focused = null) => {
-  if (!eyeTrackingSpot) return;
-  eyeTrackingSpot.classList.toggle('is-active', active);
-  eyeTrackingSpot.classList.toggle('is-focused', focused === true);
-  eyeTrackingSpot.classList.toggle('is-missed', focused === false);
-};
-
-const isOverlap = (xPos, yPos) => {
-  const rect = eyeTrackingSpot?.getBoundingClientRect();
-  if (!rect) return false;
-  return xPos >= rect.left && xPos <= rect.right && yPos >= rect.top && yPos <= rect.bottom;
-};
-
-const updateEyeTrackingBadge = () => {
-  if (!stageLiveBadge) return;
-  if (!cameraStream) {
-    stageLiveBadge.removeAttribute('data-eye-score');
-    return;
-  }
-
-  if (!eyeTrackingEnabled || !eyeContactTotal) {
-    stageLiveBadge.removeAttribute('data-eye-score');
-    return;
-  }
-
-  stageLiveBadge.setAttribute('data-eye-score', `${Math.round((eyeContactHits / eyeContactTotal) * 100)}% eye`);
-};
-
-const pauseEyeTracking = () => {
-  setEyeTrackingState(false);
-  if (!window.webgazer || !webgazerInitialized) {
-    updateEyeTrackingBadge();
-    return;
-  }
-
-  try {
-    window.webgazer.pause();
-  } catch {
-    // no-op
-  }
-
-  updateEyeTrackingBadge();
-};
-
-const startEyeTracking = async () => {
-  if (!window.webgazer || !eyeTrackingEnabled) {
-    return;
-  }
-
-  try {
-    if (!webgazerInitialized) {
-      window.webgazer.params.faceMeshBasePath = '/mediapipe/face_mesh/';
-      await window.webgazer
-        .setRegression('ridge')
-        .setGazeListener((data) => {
-          if (!data || !cameraStream) return;
-
-          eyeContactTotal += 1;
-          const focused = isOverlap(data.x, data.y);
-          if (focused) {
-            eyeContactHits += 1;
-          }
-          setEyeTrackingState(true, focused);
-          updateEyeTrackingBadge();
-        })
-        .saveDataAcrossSessions(true)
-        .begin();
-
-      window.webgazer
-        .showVideoPreview(false)
-        .showPredictionPoints(false)
-        .applyKalmanFilter(true)
-        .showFaceOverlay(false)
-        .showFaceFeedbackBox(false);
-
-      webgazerInitialized = true;
-    } else {
-      await window.webgazer.resume();
-    }
-
-    setEyeTrackingState(true);
-  } catch (error) {
-    console.warn('Eye tracking failed to start:', error);
-    eyeTrackingEnabled = false;
-    localStorage.setItem('iv-eye-tracking', 'off');
-    setEyeTrackingState(false);
-    updateEyeTrackingBadge();
-  }
-};
-
-const setCameraUI = (on) => {
-  if (cameraFeed) cameraFeed.classList.toggle('hidden', !on);
-  if (cameraPlaceholder) cameraPlaceholder.classList.toggle('hidden', on);
-  if (stageLiveBadge) stageLiveBadge.style.display = on ? '' : 'none';
-  if (cameraToggleBtn) {
-    cameraToggleBtn.classList.toggle('is-active', on);
-    cameraToggleBtn.title = on ? 'Turn camera off' : 'Turn camera on';
-  }
-  if (!on) {
-    setEyeTrackingState(false);
-  }
-  updateEyeTrackingBadge();
-};
-
-const stopCamera = () => {
-  cameraStream?.getTracks().forEach((track) => track.stop());
-  cameraStream = null;
-  if (cameraFeed) {
-    cameraFeed.srcObject = null;
-  }
-  pauseEyeTracking();
-  setCameraUI(false);
-};
-
-const startCamera = async () => {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    setCameraUI(false);
-    return;
-  }
-
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    if (cameraFeed) {
-      cameraFeed.srcObject = cameraStream;
-    }
-    setCameraUI(true);
-
-    const shouldTrackEyes = await promptForEyeTracking();
-    eyeTrackingEnabled = shouldTrackEyes;
-    localStorage.setItem('iv-eye-tracking', shouldTrackEyes ? 'on' : 'off');
-
-    if (shouldTrackEyes) {
-      await startEyeTracking();
-    } else {
-      setEyeTrackingState(false);
-      updateEyeTrackingBadge();
-    }
-  } catch (error) {
-    console.warn('Camera failed to start:', error);
-    setCameraUI(false);
-  }
-};
-
-cameraToggleBtn?.addEventListener('click', async () => {
-  cameraEnabled = !cameraEnabled;
-  localStorage.setItem('iv-camera', cameraEnabled ? 'on' : 'off');
-  if (cameraEnabled) {
-    await startCamera();
-  } else {
-    stopCamera();
-  }
-});
-
-if (cameraEnabled) {
-  void startCamera();
-} else {
-  setCameraUI(false);
-}
-
-window.addEventListener('beforeunload', () => {
-  stopCamera();
-  if (window.webgazer && webgazerInitialized) {
-    try {
-      window.webgazer.end();
-    } catch {
-      // no-op
-    }
-  }
-});
-
 const elements = {
   chatLog: document.getElementById('chat-log'),
   form: document.getElementById('ai-form'),
@@ -367,7 +163,10 @@ const elements = {
   ctxRole: document.getElementById('ctx-role'),
   ctxResume: document.getElementById('ctx-resume'),
   ctxWebSearch: document.getElementById('ctx-web-search'),
-  ctxSilly: document.getElementById('ctx-silly'),
+  ctxModeOperating: document.getElementById('ctx-mode-operating'),
+  ctxModeCrazy: document.getElementById('ctx-mode-crazy'),
+  ctxPersona: document.getElementById('ctx-persona'),
+  ctxVoice: document.getElementById('ctx-voice'),
   ctxCustomTone: document.getElementById('ctx-custom-tone'),
   ctxSeriousness: document.getElementById('ctx-seriousness'),
   ctxStyle: document.getElementById('ctx-style'),
@@ -378,9 +177,24 @@ const elements = {
   difficultyVal: document.getElementById('difficulty-val'),
   complexityVal: document.getElementById('complexity-val'),
   resumeCards: [...document.querySelectorAll('.resume-card')],
+  personaCards: [...document.querySelectorAll('.persona-card')],
+  operatingModeBlock: document.getElementById('operating-mode-block'),
+  personaModeBlock: document.getElementById('persona-mode-block'),
+  crazyModeBlock: document.getElementById('crazy-mode-block'),
   analysisPanel: document.getElementById('analysis-panel'),
   finalScorePanel: document.getElementById('final-score-panel'),
+  liveEngagementPanel: document.getElementById('live-engagement-panel'),
+  finalEngagementPanel: document.getElementById('final-engagement-panel'),
   analysisPrivacyBtn: document.getElementById('analysis-privacy-btn'),
+  toggleChatBtn,
+  toggleCoachBtn,
+  coachTabLive: document.getElementById('coach-tab-live'),
+  coachTabFinal: document.getElementById('coach-tab-final'),
+  coachTabPanelLive: document.getElementById('coach-tabpanel-live'),
+  coachTabPanelFinal: document.getElementById('coach-tabpanel-final'),
+  completeBanner: document.getElementById('interview-complete-banner'),
+  completeNewChatBtn: document.getElementById('interview-complete-new-chat'),
+  contextFeedback: document.getElementById('context-modal-feedback'),
 };
 
 const state = createInitialState();
@@ -390,11 +204,18 @@ const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const ACTIVITY_PERSIST_INTERVAL_MS = 15 * 1000;
 let inactivityTimer = null;
 let lastPersistedActivityAt = 0;
+let interviewBootLoading = false;
 
 createVoiceInput({
   micBtn: elements.micBtn,
   micStatus: elements.micStatus,
   promptInput: elements.promptInput,
+  onDraftUpdate: ({ text, status }) => {
+    chatView.setDraftMessage({ text, status });
+  },
+  onDraftClear: () => {
+    chatView.clearDraftMessage();
+  },
 });
 
 const newChatId = () => {
@@ -405,7 +226,114 @@ const newChatId = () => {
 };
 
 const persist = () => saveState(state);
-const hasActiveInterview = () => !!(state.chatId && state.contextSet && !state.interviewComplete);
+const hasInterviewVisible = () => state.history.length > 0 || !!state.finalReview;
+const hasStartedInterview = () => state.history.length > 0;
+const hasActiveInterview = () => !!(hasStartedInterview() && state.chatId && state.contextSet && !state.interviewComplete);
+const getLastHistoryRole = () => state.history[state.history.length - 1]?.role || '';
+
+eyeTracking = createEyeTracking({
+  cameraFeed,
+  cameraPlaceholder,
+  stageLiveBadge,
+  eyeTrackingSpot,
+  cameraToggleBtn,
+  recalibrateBtn,
+  calibrationOverlay,
+  calibrationCancelBtn,
+  calibrationPoints,
+  shouldMeasure: () =>
+    hasActiveInterview() &&
+    !interviewBootLoading &&
+    !assistantAudioPlaying &&
+    getLastHistoryRole() === 'assistant',
+  onMetricChange: (metric) => {
+    chatView.setScreenEngagementMetric(metric);
+  },
+});
+
+const syncScreenEngagementTracking = () => {
+  eyeTracking?.syncMeasurementWindow();
+};
+
+const mergeResolvedContext = (payload = {}) => {
+  const keys = [
+    'mode',
+    'modeLabel',
+    'personaId',
+    'personaLabel',
+    'personaSummary',
+    'personaPromptStyle',
+    'interviewerName',
+    'ttsVoice',
+    'ttsInstructions',
+    'gradingProfile',
+    'scrutinyProfile',
+    'silly',
+    'customTone',
+    'seriousness',
+    'style',
+    'difficulty',
+    'complexity',
+    'webSearchEnabled',
+  ];
+
+  keys.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      state.context[key] = payload[key];
+    }
+  });
+};
+
+const syncInterviewerPresentation = () => {
+  const persona = personaById[state.context.personaId] || null;
+  const interviewerName = state.context.interviewerName || persona?.interviewerName || 'Dorian';
+  const interviewerBadge = state.context.personaLabel || persona?.label || 'Skeptical Manager';
+
+  if (interviewerNameEl) {
+    interviewerNameEl.textContent = interviewerName;
+  }
+  if (interviewerBadgeEl) {
+    interviewerBadgeEl.textContent = interviewerBadge;
+  }
+};
+
+const syncInteractiveControls = () => {
+  const canRespond = hasStartedInterview() && !state.interviewComplete && !interviewBootLoading;
+
+  if (elements.promptInput) {
+    elements.promptInput.disabled = !canRespond;
+  }
+  if (elements.sendBtn) {
+    elements.sendBtn.disabled = !canRespond;
+  }
+  if (elements.micBtn) {
+    elements.micBtn.disabled = !canRespond;
+  }
+  if (elements.endBtn) {
+    elements.endBtn.disabled = !hasStartedInterview() || state.interviewComplete || interviewBootLoading;
+  }
+  if (elements.setupBtn) {
+    elements.setupBtn.disabled = !hasInterviewVisible() || interviewBootLoading;
+  }
+  if (elements.contextBtn) {
+    elements.contextBtn.disabled = interviewBootLoading;
+  }
+};
+
+const syncSetupModalState = () => {
+  contextModal.setDismissible(hasActiveInterview() && !interviewBootLoading);
+};
+
+const setInterviewBootLoading = (loading) => {
+  interviewBootLoading = loading;
+  if (interviewBootOverlay) {
+    interviewBootOverlay.classList.toggle('hidden', !loading);
+    interviewBootOverlay.setAttribute('aria-hidden', String(!loading));
+  }
+  syncInteractiveControls();
+  syncSetupModalState();
+  syncScreenEngagementTracking();
+};
 
 const markActivity = () => {
   state.lastActivityAt = Date.now();
@@ -458,12 +386,28 @@ const addUserMessage = (content, turnNumber) => {
 
 const addAssistantMessage = (content, options = {}) => {
   chatView.addMessage('assistant', content);
-  if (options.subtitle !== false) {
+  const shouldShowSubtitle = options.subtitle !== false;
+  const shouldSpeak = options.speak !== false;
+
+  if (shouldShowSubtitle) {
     setSubtitle(content);
   }
-  if (options.speak !== false) {
-    void tts.play(content);
+  if (shouldSpeak) {
+    void tts.play(content, {
+      voice: state.context.ttsVoice,
+      instructions: state.context.ttsInstructions,
+    });
   }
+};
+
+const openCoachForFinalReview = () => {
+  chatPanel?.classList.remove('is-open');
+  chatPanel?.setAttribute('aria-hidden', 'true');
+  toggleChatBtn?.classList.remove('is-active');
+  coachPanel?.classList.add('is-open');
+  coachPanel?.setAttribute('aria-hidden', 'false');
+  toggleCoachBtn?.classList.add('is-active');
+  chatView.setCoachTab('final');
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -506,6 +450,7 @@ const resetChat = () => {
   clearInactivityTimer();
   tts.stop();
   clearSubtitle();
+  eyeTracking?.resetMetric();
   chatView.clearMessages();
   replaceState(state, createInitialState());
   state.context = createEmptyContext();
@@ -514,8 +459,15 @@ const resetChat = () => {
   chatView.setFinalPlaceholder();
   clearState();
   contextModal.populate(state.context);
+  contextModal.setFeedback('');
+  contextModal.setBusy(false);
   contextModal.setMode('edit');
   chatView.setCoachBlurred(state.coachBlurred);
+  chatView.setCoachTab('live');
+  setInterviewBootLoading(false);
+  chatView.setStatus('Set up interview', false);
+  syncInterviewerPresentation();
+  syncScreenEngagementTracking();
 };
 
 const hydrate = () => {
@@ -530,6 +482,26 @@ const hydrate = () => {
   }
 
   chatView.clearMessages();
+  if (!hasInterviewVisible()) {
+    contextModal.populate(state.context);
+    contextModal.setFeedback('');
+    contextModal.setBusy(false);
+    contextModal.setMode('edit');
+    chatView.setInterviewComplete(false);
+    chatView.setIdleAnalysis();
+    chatView.setFinalPlaceholder();
+    chatView.setCoachBlurred(state.coachBlurred);
+    chatView.setCoachTab('live');
+    clearSubtitle();
+    contextModal.open();
+    chatView.setStatus('Set up interview', false);
+    syncInterviewerPresentation();
+    syncSetupModalState();
+    syncInteractiveControls();
+    syncScreenEngagementTracking();
+    return true;
+  }
+
   let turnNumber = 0;
   state.history.forEach((message) => {
     if (message.role === 'user') {
@@ -547,17 +519,24 @@ const hydrate = () => {
   }
 
   contextModal.populate(state.context);
+  contextModal.setFeedback('');
+  contextModal.setBusy(false);
   contextModal.setMode('view');
   chatView.setInterviewComplete(state.interviewComplete);
   chatView.setCoachBlurred(state.coachBlurred);
   if (state.finalReview) {
     chatView.showFinalReview(state.finalReview);
+    chatView.setCoachTab('final');
   } else {
     chatView.setIdleAnalysis();
     chatView.setFinalPlaceholder();
   }
   contextModal.close();
+  syncInterviewerPresentation();
+  syncSetupModalState();
+  syncInteractiveControls();
   scheduleInactivityTimeout();
+  syncScreenEngagementTracking();
   return true;
 };
 
@@ -568,10 +547,15 @@ const completeInterview = async (assistantMessage) => {
     addAssistantMessage(assistantMessage);
     state.history.push({ role: 'assistant', content: assistantMessage });
   }
+  syncScreenEngagementTracking();
   chatView.setInterviewComplete(true);
+  syncInteractiveControls();
+  syncSetupModalState();
+  openCoachForFinalReview();
   if (countUserTurns(state.history) === 0) {
     state.finalReview = null;
     chatView.showFinalReview(null);
+    chatView.setCoachTab('final');
     persist();
     return;
   }
@@ -581,6 +565,7 @@ const completeInterview = async (assistantMessage) => {
     state.finalReview = closeResult?.finalReview || null;
     if (state.finalReview) {
       chatView.showFinalReview(state.finalReview);
+      chatView.setCoachTab('final');
     }
   } catch (error) {
     addAssistantMessage(`Final review failed: ${error.message}`);
@@ -620,6 +605,7 @@ elements.form.addEventListener('submit', async (event) => {
   const turnNumber = countUserTurns(priorTranscript) + 1;
   const userBubble = addUserMessage(prompt, turnNumber);
   state.history.push({ role: 'user', content: prompt });
+  syncScreenEngagementTracking();
   markActivity();
   elements.promptInput.value = '';
   clearSubtitle();
@@ -634,8 +620,7 @@ elements.form.addEventListener('submit', async (event) => {
       ...state.context,
     });
 
-    addAssistantMessage(data.reply);
-    state.history.push({ role: 'assistant', content: data.reply });
+    mergeResolvedContext(data);
     state.chatId = data.chatId || state.chatId;
     if (data.backgroundDoc) {
       state.context.backgroundDoc = data.backgroundDoc;
@@ -644,6 +629,10 @@ elements.form.addEventListener('submit', async (event) => {
       state.context.researchSummary = data.researchSummary || '';
       state.context.webSignals = data.webSignals || '';
     }
+    syncInterviewerPresentation();
+    addAssistantMessage(data.reply);
+    state.history.push({ role: 'assistant', content: data.reply });
+    syncScreenEngagementTracking();
     markActivity();
     chatView.setIdleAnalysis();
 
@@ -673,24 +662,24 @@ elements.form.addEventListener('submit', async (event) => {
 contextModal.contextForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   tts.warmUp();
+  contextModal.setFeedback('');
 
   state.context = contextModal.read();
   state.contextSet = !!(state.context.company && state.context.role && state.context.resumeId);
-  if (!state.chatId) {
-    state.chatId = newChatId();
-  }
-
-  persist();
-  contextModal.close();
-  contextModal.setMode('view');
 
   if (!state.contextSet) {
-    addAssistantMessage('Please set company, role, and pick a resume before chatting.');
+    contextModal.setFeedback('Choose a company, role, and resume before launching the interview.');
     return;
   }
 
+  state.chatId = newChatId();
+  persist();
   markActivity();
-  setThinking(true);
+  contextModal.close({ force: true });
+  contextModal.setBusy(true);
+  clearSubtitle();
+  chatView.setStatus('Preparing interview...', true);
+  setInterviewBootLoading(true);
   try {
     const data = await startInterview({
       ...state.context,
@@ -698,24 +687,39 @@ contextModal.contextForm.addEventListener('submit', async (event) => {
       chatId: state.chatId,
     });
 
-    if (data?.opener) {
-      addAssistantMessage(data.opener);
-      state.history.push({ role: 'assistant', content: data.opener });
-      state.chatId = data.chatId || state.chatId;
-      if (data.backgroundDoc) {
-        state.context.backgroundDoc = data.backgroundDoc;
-        state.context.resumeText = data.resumeText || '';
-        state.context.jobDescription = data.jobDescription || '';
-        state.context.researchSummary = data.researchSummary || '';
-        state.context.webSignals = data.webSignals || '';
-      }
-      markActivity();
-      scheduleInactivityTimeout();
+    if (!data?.opener) {
+      throw new Error('Interview setup finished without an opening prompt. Please try again.');
     }
+
+    mergeResolvedContext(data);
+    state.chatId = data.chatId || state.chatId;
+    if (data.backgroundDoc) {
+      state.context.backgroundDoc = data.backgroundDoc;
+      state.context.resumeText = data.resumeText || '';
+      state.context.jobDescription = data.jobDescription || '';
+      state.context.researchSummary = data.researchSummary || '';
+      state.context.webSignals = data.webSignals || '';
+    }
+    syncInterviewerPresentation();
+    addAssistantMessage(data.opener);
+    state.history.push({ role: 'assistant', content: data.opener });
+    syncScreenEngagementTracking();
+    contextModal.setMode('view');
+    markActivity();
+    scheduleInactivityTimeout();
   } catch (error) {
-    addAssistantMessage(`Error preparing interview: ${error.message}`);
+    contextModal.setMode('edit');
+    contextModal.setFeedback(`Error preparing interview: ${error.message}`);
+    contextModal.open();
+    chatView.setStatus('Setup needed', false);
   } finally {
-    setThinking(false);
+    contextModal.setBusy(false);
+    setInterviewBootLoading(false);
+    if (hasStartedInterview() && !state.interviewComplete) {
+      chatView.setStatus('Ready', false);
+    }
+    syncInteractiveControls();
+    syncSetupModalState();
   }
 });
 
@@ -739,6 +743,12 @@ elements.analysisPrivacyBtn?.addEventListener('click', () => {
   state.coachBlurred = !state.coachBlurred;
   chatView.setCoachBlurred(state.coachBlurred);
   persist();
+});
+
+elements.completeNewChatBtn?.addEventListener('click', () => {
+  resetChat();
+  contextModal.setMode('edit');
+  contextModal.open();
 });
 
 ['pointerdown', 'keydown'].forEach((eventName) => {
@@ -767,3 +777,9 @@ if (!hydrate()) {
 }
 
 chatView.setCoachBlurred(state.coachBlurred);
+eyeTracking?.init();
+chatView.setScreenEngagementMetric(eyeTracking?.getMetric() || null);
+syncInterviewerPresentation();
+syncInteractiveControls();
+syncSetupModalState();
+syncScreenEngagementTracking();

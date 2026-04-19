@@ -3,6 +3,8 @@
  * Inputs: Raw request bodies for interview start and ask actions plus OpenAI client presence.
  * Outputs: Sanitized interview payloads or thrown HTTP-friendly validation errors.
  */
+const { resolveInterviewContext } = require('./interviewConfig');
+
 const requireConfiguredClient = (openaiClient) => {
   if (!openaiClient) {
     const error = new Error('OpenAI client not configured.');
@@ -17,12 +19,6 @@ const validateStartInterviewInput = (body = {}) => {
     company = '',
     role = '',
     interviewComplete = false,
-    silly = false,
-    seriousness = 0.5,
-    style = 0.5,
-    difficulty = 0.5,
-    complexity = 0.5,
-    customTone = '',
     backgroundDoc = '',
     resumeText = '',
     jobDescription = '',
@@ -38,17 +34,14 @@ const validateStartInterviewInput = (body = {}) => {
     throw error;
   }
 
+  const resolvedContext = resolveInterviewContext(body);
+
   return {
     resumeId,
     company: company.trim(),
     role: role.trim(),
     interviewComplete,
-    silly,
-    seriousness,
-    style,
-    difficulty,
-    complexity,
-    customTone,
+    ...resolvedContext,
     backgroundDoc,
     resumeText,
     jobDescription,
@@ -67,12 +60,6 @@ const validateAskInterviewInput = (body = {}) => {
     company = '',
     role = '',
     interviewComplete = false,
-    silly = false,
-    seriousness = 0.5,
-    style = 0.5,
-    difficulty = 0.5,
-    complexity = 0.5,
-    customTone = '',
     backgroundDoc = '',
     resumeText = '',
     jobDescription = '',
@@ -94,6 +81,8 @@ const validateAskInterviewInput = (body = {}) => {
     throw error;
   }
 
+  const resolvedContext = resolveInterviewContext(body);
+
   return {
     prompt: prompt.trim(),
     transcript: Array.isArray(transcript) ? transcript : [],
@@ -101,12 +90,7 @@ const validateAskInterviewInput = (body = {}) => {
     company: company.trim(),
     role: role.trim(),
     interviewComplete,
-    silly,
-    seriousness,
-    style,
-    difficulty,
-    complexity,
-    customTone,
+    ...resolvedContext,
     backgroundDoc,
     resumeText,
     jobDescription,

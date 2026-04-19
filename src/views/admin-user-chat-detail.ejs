@@ -16,12 +16,18 @@
                 <p class="muted">Company: <%= chat.context?.company || 'Not set' %></p>
                 <div class="pill-row" style="margin-top:10px;">
                     <span class="pill">Status: <%= chat.status || 'unknown' %></span>
-                    <span class="pill">Difficulty: <%= chat.context?.difficulty ?? 0.5 %></span>
-                    <span class="pill">Complexity: <%= chat.context?.complexity ?? 0.5 %></span>
-                    <span class="pill">Style: <%= chat.context?.style ?? 0.5 %></span>
-                    <span class="pill">Seriousness: <%= chat.context?.seriousness ?? 0.5 %></span>
+                    <span class="pill">Length: <%= chat.interviewLength || 'n/a' %></span>
+                    <span class="pill">Mode: <%= chat.context?.modeLabel || (chat.context?.silly ? 'Crazy Mode' : 'Operating Mode') %></span>
+                    <span class="pill">Persona: <%= chat.context?.personaLabel || 'Legacy interviewer' %></span>
+                    <span class="pill">Voice: <%= chat.context?.ttsVoice || 'default' %></span>
+                    <span class="pill">Grading: <%= chat.context?.gradingProfile === 'strict-operating-v1' ? 'strict' : 'standard' %></span>
                     <span class="pill">Web search: <%= chat.context?.webSearchEnabled === false ? 'Off' : 'On' %></span>
-                    <span class="pill">Crazy mode: <%= chat.context?.silly ? 'On' : 'Off' %></span>
+                    <% if ((chat.context?.mode || (chat.context?.silly ? 'crazy' : 'operating')) === 'crazy') { %>
+                        <span class="pill">Difficulty: <%= chat.context?.difficulty ?? 0.5 %></span>
+                        <span class="pill">Complexity: <%= chat.context?.complexity ?? 0.5 %></span>
+                        <span class="pill">Style: <%= chat.context?.style ?? 0.5 %></span>
+                        <span class="pill">Seriousness: <%= chat.context?.seriousness ?? 0.5 %></span>
+                    <% } %>
                 </div>
             </div>
             <div class="pill-row">

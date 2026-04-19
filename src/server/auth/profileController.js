@@ -35,6 +35,7 @@ const renderProfile = async (req, res, { error = null, success = null } = {}) =>
     resumes,
     error,
     success,
+    mustChangePassword: !!req.session?.mustChangePassword,
   });
 };
 
@@ -57,6 +58,8 @@ const updateProfile = async (req, res) => {
   if (name) updates.name = name;
   if (password) {
     updates.passwordHash = await bcrypt.hash(password, 10);
+    updates.temporaryPasswordHash = null;
+    updates.temporaryPasswordIssuedAt = null;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -71,6 +74,9 @@ const updateProfile = async (req, res) => {
     );
 
     req.session.user = toSessionUser(updatedUser);
+    if (password) {
+      req.session.mustChangePassword = false;
+    }
     await saveSession(req);
 
     return renderProfile(req, res, { success: 'Profile updated.' });

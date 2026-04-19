@@ -27,6 +27,36 @@ const { ensureChatId } = require('../interviews/interviewService');
 
 const USER_ROLES = ['candidate', 'admin'];
 
+const formatInterviewLength = (chat) => {
+  const startAt = chat?.createdAt ? new Date(chat.createdAt) : null;
+  const endSource = chat?.closedAt || chat?.updatedAt || chat?.createdAt;
+  const endAt = endSource ? new Date(endSource) : null;
+
+  if (!startAt || !endAt || Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    return 'n/a';
+  }
+
+  const durationMs = Math.max(0, endAt.getTime() - startAt.getTime());
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${minutes}m ${seconds}s`;
+};
+
+const withInterviewLength = (chat) => ({
+  ...chat,
+  interviewLength: formatInterviewLength(chat),
+});
+
 const saveSession = (req) =>
   new Promise((resolve, reject) => {
     req.session.save((error) => {
@@ -228,7 +258,7 @@ const showUserChats = async (req, res) => {
 
   const chats = await Promise.all(
     docs.map(async (chat) => ({
-      ...chat,
+      ...withInterviewLength(chat),
       finalScore: await findInterviewScoreByChatId({
         collections: req.app.locals.collections,
         userId,
@@ -279,7 +309,7 @@ const showUserChatDetail = async (req, res) => {
 
     return res.render('admin-user-chat-detail', {
       targetUser,
-      chat,
+      chat: withInterviewLength(chat),
       turns,
       finalScore,
     });

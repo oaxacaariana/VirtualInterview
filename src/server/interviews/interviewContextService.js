@@ -14,6 +14,26 @@ const fetchWebResearch = async ({ company, role, openaiClient }) => {
   return summary;
 };
 
+const loadResumeText = async (resumeDoc) => {
+  if (!resumeDoc?.path) {
+    return '';
+  }
+
+  return (await parseResumeToText(resumeDoc.path)).slice(0, 8000);
+};
+
+const loadLatestResumeScore = async (collections, resumeId) => {
+  if (!collections?.resumeScores) {
+    return null;
+  }
+
+  return collections.resumeScores
+    .find({ resumeId })
+    .sort({ createdAt: -1 })
+    .limit(1)
+    .next();
+};
+
 const generateBackgroundNote = async ({ openaiClient, resumeText, company, role, webSignals }) => {
   try {
     const completion = await openaiClient.chat.completions.create({
@@ -79,15 +99,15 @@ const loadInterviewContext = async ({
     throw error;
   }
 
-  let resumeText = '';
-  if (resumeDoc.path) {
-    resumeText = (await parseResumeToText(resumeDoc.path)).slice(0, 8000);
-  }
+  const shouldResearch = includeResearch && webSearchEnabled;
+  const [resumeText, latestResumeScore, webSignals] = await Promise.all([
+    loadResumeText(resumeDoc),
+    loadLatestResumeScore(collections, resumeDoc._id),
+    shouldResearch ? fetchWebResearch({ company, role, openaiClient }) : Promise.resolve(''),
+  ]);
 
-  let webSignals = '';
   let researchSummary = '';
-  if (includeResearch && webSearchEnabled) {
-    webSignals = await fetchWebResearch({ company, role, openaiClient });
+  if (shouldResearch) {
     researchSummary = await generateBackgroundNote({
       openaiClient,
       resumeText,
@@ -95,15 +115,6 @@ const loadInterviewContext = async ({
       role,
       webSignals,
     });
-  }
-
-  let latestResumeScore = null;
-  if (collections?.resumeScores) {
-    latestResumeScore = await collections.resumeScores
-      .find({ resumeId: resumeDoc._id })
-      .sort({ createdAt: -1 })
-      .limit(1)
-      .next();
   }
 
   return buildCachedInterviewContext({

@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"userId":{"$numberInt":"1"},"uploadedAt":{"$numberInt":"-1"}},"name":"user_resume_files"}],"uuid":"608e4e061dba47ec9862f8c30dfab604","collectionName":"resumeFiles","type":"collection"}
