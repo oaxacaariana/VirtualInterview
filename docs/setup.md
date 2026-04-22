@@ -70,6 +70,9 @@ The application starts from:
 server.js
 ```
 
+That is the file used by the current `npm start` and `npm run dev` scripts.
+`package.json` still lists `index.js` as `main`, but the active runtime entry point is `server.js`.
+
 That file loads:
 
 - environment variables

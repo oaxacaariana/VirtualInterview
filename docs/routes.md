@@ -22,6 +22,18 @@ Renders the signup form.
 
 Creates a user account and signs the user in.
 
+### `GET /forgot-password`
+
+Renders the temporary-password request form.
+
+### `POST /forgot-password`
+
+Generates a temporary password for the requested username and renders it back in the UI.
+
+### `POST /logout`
+
+Destroys the current session and redirects to the home page.
+
 ## Authenticated View Routes
 
 ### `GET /upload`

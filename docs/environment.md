@@ -51,9 +51,14 @@ gpt-4.1-mini
 
 ### `REVIEW_MODEL`
 
-Optional override for interview review generation.
+Optional override for turn-level interview review generation.
 
 If omitted, the app falls back to `MODEL`.
+
+Current behavior in code:
+
+- `REVIEW_MODEL` is used for per-turn review feedback generated after each answer
+- final interview review generation currently uses `MODEL`
 
 ### `TTS_MODEL`
 
