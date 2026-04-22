@@ -18,19 +18,19 @@
         }
         return 0;
       };
-      const bars = [
-        { label: 'Role fit', val: b.role_fit, max: 25 },
-        { label: 'Experience depth', val: b.experience_depth, max: 20 },
-        { label: 'Quantified impact', val: b.quantified_impact, max: 15 },
-        { label: 'Skills evidence', val: b.skills_evidence_alignment, max: 10 },
-        { label: 'Resume completeness', val: b.resume_completeness, max: 10 },
-        { label: 'Structure & clarity', val: b.professional_structure_clarity, max: 10 },
-        { label: 'Project quality', val: b.project_quality, max: 5 },
-        { label: 'Education / certs', val: b.education_certifications, max: 5 },
-      ];
-      const tier = typeof fitScore === 'number'
-        ? (fitScore >= 85 ? 'Excellent match' : fitScore >= 70 ? 'Strong match' : fitScore >= 50 ? 'Partial match' : 'Needs alignment')
-        : 'Pending';
+      const strengthLabel = (val, max) => {
+        if (typeof val !== 'number' || !max) return 'Not rated';
+        const ratio = val / max;
+        if (ratio >= 0.85) return 'Excellent';
+        if (ratio >= 0.65) return 'Strong';
+        if (ratio >= 0.45) return 'Moderate';
+        if (ratio >= 0.25) return 'Limited';
+        return 'Weak';
+      };
+      const bars = (scoreRubricConfig || []).map((row) => ({
+        ...row,
+        val: b[row.key],
+      }));
     %>
 
     <div class="results-hero">
@@ -43,30 +43,30 @@
                 <% if (jobSnippet) { %><span class="pill">Job: <%= jobSnippet.slice(0,120) %><%= jobSnippet.length > 120 ? '...' : '' %></span><% } %>
             </div>
         </div>
-        <div class="hero-badge"><%= tier %></div>
+        <div class="hero-badge"><%= fitLabel %></div>
     </div>
 
     <div class="score-grid">
         <div class="score-card glass primary-score">
             <div class="score-ring results-ring" style="--score:<%= typeof fitScore === 'number' ? (fitScore*3.6) + 'deg' : '0deg' %>; --ring-color:<%= ringColor %>; width:170px; height:170px;">
                 <div class="score-ring__fill"></div>
-                <div class="score-ring__center" style="font-size:1.5rem;"><%= typeof fitScore === 'number' ? fitScore : '-' %></div>
+                <div class="score-ring__center score-ring__center--label-lg"><%= fitBadge %></div>
             </div>
             <div class="score-meta">
                 <div class="score-title"><%= scoreTitle || 'Resume Strength & Role Fit' %></div>
-                <div class="score-tier"><%= tier %></div>
-                <p class="muted">Total of all eight components, balancing role fit with resume quality.</p>
+                <div class="score-tier"><%= fitLabel %></div>
+                <p class="muted">Balanced across core role fit, proven experience, and job-specific evidence.</p>
             </div>
         </div>
 
         <div class="score-card glass breakdown-card">
-            <h3>Component Breakdown</h3>
+            <h3>Fit Breakdown</h3>
             <% if (scoreBreakdown) { %>
                 <% bars.forEach(row => { %>
                     <div class="bar-row">
                         <div class="bar-label">
                             <span><%= row.label %></span>
-                            <span class="bar-value"><%= row.val ?? '-' %>/<%= row.max %></span>
+                            <span class="bar-value"><%= strengthLabel(row.val, row.max) %></span>
                         </div>
                         <div class="bar-track">
                             <div class="bar-fill" style="--fill:<%= percent(row.val, row.max) %>% ; --bar-color:<%= ringColor %>"></div>
@@ -75,8 +75,8 @@
                 <% }) %>
                 <div class="bar-row total-row">
                     <div class="bar-label">
-                        <span>Overall Score</span>
-                        <span class="bar-value"><%= typeof fitScore === 'number' ? fitScore : '-' %>/100</span>
+                        <span>Overall match fit</span>
+                        <span class="bar-value"><%= fitLabel %></span>
                     </div>
                     <div class="bar-track">
                         <div class="bar-fill" style="--fill:<%= typeof fitScore === 'number' ? fitScore : 0 %>% ; --bar-color:<%= ringColor %>"></div>

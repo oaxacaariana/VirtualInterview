@@ -8,7 +8,7 @@ const { toFile } = require('openai');
 
 const interviewModel = process.env.MODEL || 'gpt-4.1-mini';
 const reviewModel = process.env.REVIEW_MODEL || interviewModel;
-const ttsModel = process.env.TTS_MODEL || 'tts-1';
+const ttsModel = process.env.TTS_MODEL || 'gpt-4o-mini-tts';
 const ttsVoice = process.env.TTS_VOICE || 'shimmer';
 const ttsFormat = process.env.TTS_FORMAT || 'mp3';
 const ttsInstructions =

@@ -4,6 +4,14 @@
  * Outputs: Normalized turn-level feedback and final interview review objects.
  */
 const { interviewModel, reviewModel } = require('../shared/openaiClient');
+const {
+  INTERVIEW_REVIEW_WEIGHT_MAP,
+  computeWeightedOverallScore,
+  normalizeAreaLabel,
+  normalizeCategoryScores,
+  pickAreaLabel,
+} = require('./interviewReviewRubric');
+const { normalizeInterviewGrade } = require('./interviewGradeUtils');
 
 const safeString = (value, fallback = '') =>
   typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -47,53 +55,51 @@ const normalizeTurnAnalysis = (raw, turnNumber) => {
     questionAnswered: raw?.questionAnswered !== false,
     summary: clampFeedback(
       raw?.summary,
-      'You addressed the question reasonably well, but the answer could be tighter and more specific.'
+      'You addressed the question reasonably well, but the answer could be tighter, more focused, and more intentional.'
     ),
     positives: ensureThreeItems(raw?.positives, [
-      'You stayed relevant to the question.',
-      'You gave the interviewer enough context to understand your point.',
-      'You kept a generally professional tone.',
+      'You stayed focused on what the interviewer actually asked.',
+      'You gave enough context for the interviewer to follow your point.',
+      'You kept a clear and professional baseline.',
     ]),
     negatives: ensureThreeItems(raw?.negatives, [
-      'You could be more specific about what you actually did.',
-      'You could tie the answer back to the role more explicitly.',
-      'You could end with a clearer outcome or takeaway.',
+      'You could be clearer about what you personally did or decided.',
+      'You could cut extra detail and get to the relevant point faster.',
+      'You could tie the answer back to the role more explicitly when it matters.',
     ]),
   };
 };
 
 const normalizeFinalReview = (raw, reviewedTurns) => {
-  const categoryScores = raw?.categoryScores || {};
+  const categoryScores = normalizeCategoryScores(raw?.categoryScores || {});
+  const overallScore = computeWeightedOverallScore(categoryScores);
+  const letterGrade = normalizeInterviewGrade('', overallScore, reviewedTurns);
+
   return {
-    overallScore: toHundredScore(raw?.overallScore, 50),
-    letterGrade: safeString(raw?.letterGrade, 'C'),
-    categoryScores: {
-      relevance: toTenScore(categoryScores.relevance, 5),
-      star: toTenScore(categoryScores.star, 5),
-      roleAlignment: toTenScore(categoryScores.roleAlignment, 5),
-      clarity: toTenScore(categoryScores.clarity, 5),
-      confidence: toTenScore(categoryScores.confidence, 5),
-    },
+    overallScore,
+    letterGrade,
+    categoryScores,
     overallSummary: clampFeedback(
       raw?.overallSummary,
-      'You showed baseline interview readiness, but your answers need stronger specificity, tighter structure, and more role-focused evidence to score as a strong performance.'
+      'You showed baseline interview readiness, but your answers need better focus, cleaner relevance, and stronger role-connected evidence to score as a strong performance.'
     ),
-    strongestArea: safeString(raw?.strongestArea, 'Relevance'),
-    weakestArea: safeString(raw?.weakestArea, 'Use of Examples'),
+    strongestArea: normalizeAreaLabel(raw?.strongestArea, pickAreaLabel(categoryScores, 'strongest')),
+    weakestArea: normalizeAreaLabel(raw?.weakestArea, pickAreaLabel(categoryScores, 'weakest')),
     patterns: clampFeedback(
       raw?.patterns,
-      'Across the interview, your answers were directionally relevant but inconsistent in detail and measurable outcomes.'
+      'Across the interview, your answers were directionally relevant but uneven in focus, specificity, and how cleanly you stayed on the actual question.'
     ),
     strengths: ensureThreeItems(raw?.strengths, [
       'You consistently engaged with the questions instead of completely losing the thread.',
-      'You showed some relevant experience that could be strengthened with sharper evidence.',
-      'You maintained a generally professional baseline even when your answers were uneven.',
+      'You showed relevant experience and judgment that can be strengthened with sharper support.',
+      'You maintained a generally professional and understandable baseline even when your answers were uneven.',
     ]),
     improvements: ensureThreeItems(raw?.improvements, [
-      'Use one concrete example per answer and finish it with a measurable result.',
-      'Tie each answer back to the target role instead of leaving the relevance implied.',
-      'Cut filler and organize your response so the interviewer can follow it in one pass.',
+      'Answer the exact question first, then add only the detail that helps prove your point.',
+      'Use numbers or named specifics when they genuinely strengthen an impact claim, not by default.',
+      'Cut filler and keep your examples focused so the interviewer can follow them in one pass.',
     ]),
+    rubricWeights: INTERVIEW_REVIEW_WEIGHT_MAP,
     reviewedTurns,
   };
 };
@@ -132,11 +138,14 @@ const createTurnAnalysis = async ({
           'Use only the provided question, candidate response, company, role, and background context.',
           'Do not reference any previous sessions or outside context.',
           isStrictOperating
-            ? 'Operating mode rubric: grade harshly. Do not reward buzzwords, frameworks, or polished phrasing unless the answer proves direct ownership, concrete detail, reasoning, and outcomes.'
+            ? 'Operating mode rubric: grade harshly. Do not reward buzzwords, frameworks, or polished phrasing unless the answer proves direct ownership, relevant detail, reasoning, and actual understanding.'
             : 'Keep the analysis generic and practical, not heavily scored.',
           isStrictOperating
-            ? 'Treat vague ownership, missing metrics, generic STAR language, shallow tradeoff analysis, and indirect answers as meaningful weaknesses.'
+            ? 'Treat vague ownership, generic STAR language, shallow tradeoff analysis, irrelevant filler, and indirect answers as meaningful weaknesses. Do not require exact metrics, proper nouns, or named tools in every strong answer. Only penalize missing numbers when quantification would reasonably strengthen a claim about impact, scale, scope, or results.'
             : 'Keep the analysis grounded in the direct evidence of the answer.',
+          'A concise answer can score well if it directly answers the question with enough specificity for that moment. Do not punish brevity when the question did not require a long story.',
+          'Penalize answers that are bloated, wander away from the question, or add unnecessary detail that weakens the main point.',
+          'The core test is whether the candidate understood what was being asked and responded with relevant, useful information.',
           'Return valid JSON only.',
           'Return exactly this shape: {"score":0,"verdict":"strong","questionAnswered":true,"summary":"","positives":["","",""],"negatives":["","",""]}',
           'score must be from 1 to 10 and reflect how effective the answer was for that question.',
@@ -208,10 +217,15 @@ const createFinalInterviewReview = async ({
             ? 'Operating mode rubric: use a harsher bar than standard. Do not add leniency because the interview was difficult. Generic buzzwords, vague ownership, and low-evidence answers should materially reduce scores.'
             : 'Calibrate scoring against the selected interview difficulty: harder interviews should be graded more leniently for missed perfection, while easy interviews should be graded a bit more strictly.',
           mode === 'operating' || gradingProfile === 'strict-operating-v1'
-            ? 'Reward specificity, direct ownership, measurable outcomes, tradeoff reasoning, and responsiveness to follow-up pressure. Penalize shallow answers even if they sound polished.'
+            ? 'Reward direct relevance, clear ownership, appropriate specificity, concise focus, tradeoff reasoning, and responsiveness to follow-up pressure. Penalize shallow or bloated answers even if they sound polished.'
             : 'Reward practical relevance, clarity, and evidence from the transcript.',
           'Return valid JSON only.',
-          'Use category scores from 1 to 10 and overallScore from 0 to 100.',
+          'Do not require exact numbers, named tools, or proper nouns in every strong answer. In many real interviews, a strong answer is simply one that understands the question and answers it directly with the right amount of detail.',
+          'Only expect quantitative metrics when the candidate is describing impact, scale, scope, performance, or results and a number would naturally strengthen credibility.',
+          'Penalize answers that over-explain, drift off-topic, or bury the answer under unnecessary detail. Relevance and focus matter.',
+          'Score these categories independently from 1 to 10: relevance = did the answer directly address the question and stay on point, star = how well the answer used a clear situation-task-action-result structure when depth was needed, roleAlignment = how strongly the answer proved fit for this role, clarity = how easy the answer was to follow and how appropriately focused it was, confidence = how credible and composed the delivery felt.',
+          'Role alignment and relevance matter more than confidence. Do not inflate scores just because an answer sounds polished or uses interview buzzwords.',
+          'overallScore and letterGrade are included for compatibility, but they will be recalculated downstream from the category scores. Focus on making the category scores accurate and evidence-based.',
           'Overall summary should be 5 to 8 sentences in second person.',
           'patterns should describe the repeated trends across the interview in 3 to 5 sentences.',
           'strengths and improvements must each contain exactly 0-5 concrete bullets. Do not include generic advice that isnt directly supported by the transcript and turn reviews. If there are no clear strengths or improvements, return an empty array for each. Be specific about what was good or needs improvement, and tie it to evidence from the transcript.',

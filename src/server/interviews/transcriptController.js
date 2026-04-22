@@ -11,6 +11,7 @@ const {
   listChatTurnsForChat,
 } = require('./chatRepository');
 const { ensureChatId } = require('./interviewService');
+const { isDnfInterviewScore } = require('./interviewGradeUtils');
 
 const formatInterviewLength = (chat) => {
   const startAt = chat?.createdAt ? new Date(chat.createdAt) : null;
@@ -44,6 +45,7 @@ const withInterviewLength = (chat) => ({
 
 const showChatLogsPage = async (req, res) => {
   try {
+    const showDnf = req.query?.dnf === '1';
     const userId = toObjectId(req.session?.user?.id);
     const docs = await listRecentChatsForUser({
       collections: req.app.locals.collections,
@@ -61,9 +63,14 @@ const showChatLogsPage = async (req, res) => {
       }))
     );
 
-    return res.render('chat-logs', { chats });
+    const filteredChats = chats.filter((chat) => isDnfInterviewScore(chat.finalScore) === showDnf);
+
+    return res.render('chat-logs', {
+      chats: filteredChats,
+      showDnf,
+    });
   } catch (error) {
-    return res.status(500).render('chat-logs', { chats: [] });
+    return res.status(500).render('chat-logs', { chats: [], showDnf: req.query?.dnf === '1' });
   }
 };
 
@@ -101,12 +108,23 @@ const showChatLogDetail = async (req, res) => {
 
 const listTranscripts = async (req, res) => {
   try {
+    const showDnf = req.query?.dnf === '1';
     const userId = toObjectId(req.session?.user?.id);
     const docs = await listRecentChatsForUser({
       collections: req.app.locals.collections,
       userId,
     });
-    return res.json(docs);
+    const chats = await Promise.all(
+      docs.map(async (chat) => ({
+        ...withInterviewLength(chat),
+        finalScore: await findInterviewScoreByChatId({
+          collections: req.app.locals.collections,
+          userId,
+          chatId: chat.chatId,
+        }),
+      }))
+    );
+    return res.json(chats.filter((chat) => isDnfInterviewScore(chat.finalScore) === showDnf));
   } catch (error) {
     return res.status(500).json({ error: error.message || 'chatLogs unavailable' });
   }

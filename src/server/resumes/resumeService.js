@@ -10,10 +10,20 @@ const {
   listResumesWithLatestScores,
 } = require('./resumeRepository');
 const { createResumeAssessment, isEnabledField } = require('./resumeScoringService');
+const {
+  RESUME_RUBRIC_VERSION,
+  getResumeRubricConfig,
+  fitLabelForScore,
+  fitBadgeForScore,
+} = require('./resumeScorePresentation');
 
 const emptyResultsView = () => ({
   fitScore: null,
+  fitLabel: fitLabelForScore(null),
+  fitBadge: fitBadgeForScore(null),
   ringColor: '#555',
+  scoreRubricVersion: RESUME_RUBRIC_VERSION,
+  scoreRubricConfig: getResumeRubricConfig(RESUME_RUBRIC_VERSION),
   scoreBreakdown: null,
   scoreTitle: 'Resume Strength & Role Fit',
   positives: [],
@@ -32,12 +42,16 @@ const mapResumeSummary = (resumeDoc) => ({
   archived: !!resumeDoc.archived,
   uploadedAt: resumeDoc.uploadedAt,
   fitScore: resumeDoc.fitScore ?? null,
+  fitLabel: fitLabelForScore(resumeDoc.fitScore),
+  fitBadge: fitBadgeForScore(resumeDoc.fitScore),
   fitSummary: resumeDoc.fitSummary || '',
   fitPositives: resumeDoc.fitPositives || [],
   fitNegatives: resumeDoc.fitNegatives || [],
   fitCompany: resumeDoc.fitCompany || '',
   fitJobSnippet: resumeDoc.fitJobSnippet || '',
   fitTitle: resumeDoc.fitTitle || 'Resume Strength & Role Fit',
+  scoreRubricVersion: resumeDoc.fitRubricVersion || 1,
+  scoreRubricConfig: getResumeRubricConfig(resumeDoc.fitRubricVersion || 1),
   fitRubric: resumeDoc.fitRubric || null,
   fitCreatedAt: resumeDoc.fitCreatedAt || null,
   ringColor: resumeDoc.ringColor ?? ringColorForScore(resumeDoc.fitScore),
@@ -61,7 +75,11 @@ const getResumeResultsView = async ({ collections, sessionUser, resumeId }) => {
 
   return {
     fitScore: resume.fitScore,
+    fitLabel: fitLabelForScore(resume.fitScore),
+    fitBadge: fitBadgeForScore(resume.fitScore),
     ringColor: ringColorForScore(resume.fitScore),
+    scoreRubricVersion: resume.fitRubricVersion || 1,
+    scoreRubricConfig: getResumeRubricConfig(resume.fitRubricVersion || 1),
     scoreBreakdown: resume.fitRubric || null,
     scoreTitle: resume.fitTitle || 'Resume Strength & Role Fit',
     positives: resume.fitPositives || [],
@@ -79,7 +97,11 @@ const getUploadResultView = async ({ collections, sessionUser, file, body }) => 
   if (!file) {
     return {
       fitScore: 'Pending',
+      fitLabel: fitLabelForScore(null),
+      fitBadge: fitBadgeForScore(null),
       ringColor: ringColorForScore(null),
+      scoreRubricVersion: RESUME_RUBRIC_VERSION,
+      scoreRubricConfig: getResumeRubricConfig(RESUME_RUBRIC_VERSION),
       positives: [],
       negatives: ['No resume uploaded. Please try again.'],
       summary: '',
@@ -104,6 +126,9 @@ const getUploadResultView = async ({ collections, sessionUser, file, body }) => 
 
   return {
     ...result,
+    fitLabel: fitLabelForScore(result.fitScore),
+    fitBadge: fitBadgeForScore(result.fitScore),
+    scoreRubricConfig: getResumeRubricConfig(result.scoreRubricVersion || RESUME_RUBRIC_VERSION),
     ringColor: ringColorForScore(result.fitScore),
   };
 };

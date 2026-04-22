@@ -8,10 +8,17 @@ const { buildResumeFile, buildResumeScore } = require('../data/persistence');
 const { parseResumeToText } = require('../shared/resumeParser');
 const { runWebResearch } = require('../shared/webResearch');
 const { toObjectId, insertResumeFile, insertResumeScore } = require('./resumeRepository');
+const {
+  RESUME_RUBRIC_VERSION,
+  getResumeRubricConfig,
+} = require('./resumeScorePresentation');
 
 const model = process.env.MODEL || 'gpt-4.1-mini';
 const MAX_STRICTNESS = 1;
 let client;
+const CURRENT_RUBRIC_LIMITS = Object.fromEntries(
+  getResumeRubricConfig(RESUME_RUBRIC_VERSION).map((item) => [item.key, item.max])
+);
 
 const getScoringClient = () => {
   if (!process.env.OPENAI_API_KEY) {
@@ -55,24 +62,42 @@ const clampScore = (value, max) => {
 
 const applyQualityCaps = (score, breakdown) => {
   const capped = Number(score) || 0;
-  const severeCap = MAX_STRICTNESS >= 0.75 ? 52 : MAX_STRICTNESS >= 0.6 ? 55 : 59;
-  const moderateCap = MAX_STRICTNESS >= 0.75 ? 62 : MAX_STRICTNESS >= 0.6 ? 65 : 69;
+  const severeCap = MAX_STRICTNESS >= 0.75 ? 54 : MAX_STRICTNESS >= 0.6 ? 57 : 61;
+  const moderateCap = MAX_STRICTNESS >= 0.75 ? 64 : MAX_STRICTNESS >= 0.6 ? 67 : 71;
 
   if (
     breakdown.resume_completeness <= 4 ||
-    breakdown.professional_structure_clarity <= 4 ||
-    breakdown.experience_depth <= 8
+    breakdown.professional_structure_clarity <= 2 ||
+    breakdown.experience_depth <= 10
   ) {
     return Math.min(capped, severeCap);
   }
 
   if (
     breakdown.resume_completeness <= 6 ||
-    breakdown.professional_structure_clarity <= 6 ||
-    breakdown.skills_evidence_alignment <= 5 ||
+    breakdown.professional_structure_clarity <= 3 ||
+    breakdown.skills_evidence_alignment <= 6 ||
     breakdown.project_quality <= 2
   ) {
     return Math.min(capped, moderateCap);
+  }
+
+  return capped;
+};
+
+const applyFundamentalFitCaps = (score, breakdown) => {
+  const capped = Number(score) || 0;
+
+  if (breakdown.role_fit <= 7 || breakdown.experience_depth <= 8) {
+    return Math.min(capped, 44);
+  }
+
+  if (breakdown.role_fit <= 10 || breakdown.experience_depth <= 12) {
+    return Math.min(capped, 58);
+  }
+
+  if (breakdown.role_fit <= 12 && breakdown.skills_evidence_alignment <= 5) {
+    return Math.min(capped, 64);
   }
 
   return capped;
@@ -111,6 +136,13 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
           getStrictnessPrompt(),
           'Be skeptical and conservative. Do not assume competence from brevity, polish, or keyword overlap.',
           "Compare the candidate's skills, experience, education, project depth, and written evidence against the job description and inferred company expectations.",
+          'Balance foundational fit for the role against fit for this exact posting.',
+          'Separate core role readiness from job-description wording overlap.',
+          "role_fit must measure the candidate's underlying ability to do this kind of role based on proven background, scope, seniority, ownership, and transferable relevance.",
+          'Do not treat role_fit as a keyword-match score.',
+          'skills_evidence_alignment should reflect how well the resume proves the specific needs in this posting, but it must stay low when the resume only names skills without evidence.',
+          'If the resume lacks fundamental background normally required for the role, keep role_fit and experience_depth low even when wording overlaps with the posting.',
+          'Use this exact weighting: role_fit 0-20, experience_depth 0-25, quantified_impact 0-15, skills_evidence_alignment 0-15, resume_completeness 0-10, professional_structure_clarity 0-5, project_quality 0-5, education_certifications 0-5.',
           'Return JSON only with keys: title, role_fit, experience_depth, quantified_impact, skills_evidence_alignment, resume_completeness, professional_structure_clarity, project_quality, education_certifications, compatibility_score, positives, negatives, summary.',
           'Do not reward keyword overlap without evidence.',
           'If the resume is thin, vague, or underexplained, score lower rather than higher.',
@@ -142,20 +174,24 @@ const getFitAssessment = async ({ resumeText, jobDescription, company, webResear
   }
 
   const breakdown = {
-    role_fit: clampScore(parsed.role_fit, 25),
-    experience_depth: clampScore(parsed.experience_depth, 20),
-    quantified_impact: clampScore(parsed.quantified_impact, 15),
-    skills_evidence_alignment: clampScore(parsed.skills_evidence_alignment, 10),
-    resume_completeness: clampScore(parsed.resume_completeness, 10),
-    professional_structure_clarity: clampScore(parsed.professional_structure_clarity, 10),
-    project_quality: clampScore(parsed.project_quality, 5),
-    education_certifications: clampScore(parsed.education_certifications, 5),
+    role_fit: clampScore(parsed.role_fit, CURRENT_RUBRIC_LIMITS.role_fit),
+    experience_depth: clampScore(parsed.experience_depth, CURRENT_RUBRIC_LIMITS.experience_depth),
+    quantified_impact: clampScore(parsed.quantified_impact, CURRENT_RUBRIC_LIMITS.quantified_impact),
+    skills_evidence_alignment: clampScore(parsed.skills_evidence_alignment, CURRENT_RUBRIC_LIMITS.skills_evidence_alignment),
+    resume_completeness: clampScore(parsed.resume_completeness, CURRENT_RUBRIC_LIMITS.resume_completeness),
+    professional_structure_clarity: clampScore(parsed.professional_structure_clarity, CURRENT_RUBRIC_LIMITS.professional_structure_clarity),
+    project_quality: clampScore(parsed.project_quality, CURRENT_RUBRIC_LIMITS.project_quality),
+    education_certifications: clampScore(parsed.education_certifications, CURRENT_RUBRIC_LIMITS.education_certifications),
   };
 
   const computedTotal = Object.values(breakdown).reduce((sum, value) => sum + value, 0);
   return {
     title: (parsed.title || 'Resume Strength & Role Fit').toString().trim() || 'Resume Strength & Role Fit',
-    compatibility_score: applyQualityCaps(Math.min(100, computedTotal), breakdown),
+    compatibility_score: applyQualityCaps(
+      applyFundamentalFitCaps(Math.min(100, computedTotal), breakdown),
+      breakdown
+    ),
+    rubricVersion: RESUME_RUBRIC_VERSION,
     breakdown,
     positives: Array.isArray(parsed.positives) ? parsed.positives.filter(Boolean) : [],
     negatives: Array.isArray(parsed.negatives) ? parsed.negatives.filter(Boolean) : [],
@@ -193,6 +229,7 @@ const createResumeAssessment = async ({
 
   let fitScore = 'Pending';
   let scoreBreakdown = null;
+  let scoreRubricVersion = RESUME_RUBRIC_VERSION;
   let scoreTitle = 'Resume Strength & Role Fit';
   let positives = [];
   let negatives = [];
@@ -221,6 +258,7 @@ const createResumeAssessment = async ({
       if (assessment) {
         fitScore = assessment.compatibility_score ?? fitScore;
         scoreBreakdown = assessment.breakdown || scoreBreakdown;
+        scoreRubricVersion = assessment.rubricVersion || scoreRubricVersion;
         scoreTitle = assessment.title || scoreTitle;
         positives = assessment.positives || positives;
         negatives = assessment.negatives || negatives;
@@ -239,6 +277,7 @@ const createResumeAssessment = async ({
         resumeId,
         score: fitScore,
         rubric: scoreBreakdown,
+        rubricVersion: scoreRubricVersion,
         title: scoreTitle,
         summary,
         positives,
@@ -263,6 +302,7 @@ const createResumeAssessment = async ({
     resumeSizeKb: Math.max(1, Math.round(resumeDoc.size / 1024)),
     resumeId,
     scoreBreakdown,
+    scoreRubricVersion,
     scoreTitle,
   };
 };

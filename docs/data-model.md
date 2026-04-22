@@ -95,6 +95,7 @@ Key fields:
 - `resumeId`
 - `score`
 - `rubric`
+- `rubricVersion`
 - `title`
 - `summary`
 - `positives`
@@ -111,6 +112,7 @@ Relationships:
 Notes:
 
 - multiple score documents can exist for the same resume if the user re-scores it against different role or company context
+- the stored numeric `score` is still used internally, but current UI views present qualitative fit labels such as `Excellent fit` or `Good fit`
 
 ## `chatLogs`
 
@@ -139,7 +141,7 @@ Relationships:
 
 Notes:
 
-- `context` stores resume and interview metadata such as role, company, web research signals, and cached prompt context
+- `context` stores resume and interview metadata such as role, company, persona, TTS voice and instructions, web research signals, and cached prompt context
 
 ## `chatTurns`
 
@@ -197,6 +199,11 @@ Relationships:
 
 - belongs to one user
 - associated to one chat session by `chatId`
+
+Notes:
+
+- final interview scores use a weighted rubric across role fit, relevance, structured answers, clarity, and confidence
+- chats with fewer than 4 reviewed turns normalize to `DNF` instead of a letter grade
 
 ## Sessions
 

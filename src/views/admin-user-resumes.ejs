@@ -29,7 +29,7 @@
                         <div class="resume-card__top">
                             <div class="resume-card__meta">
                                 <h3 class="resume-title"><%= r.originalName %></h3>
-                                <p class="muted">Uploaded <%= r.uploadedAt ? new Date(r.uploadedAt).toLocaleString() : 'Unknown' %></p>
+                                <p class="muted">Uploaded <%= r.uploadedAt ? new Date(r.uploadedAt).toLocaleString() : 'Unknown' %> &bull; <%= r.fitLabel %></p>
                                 <div class="pill-row" style="margin-top:10px;">
                                     <span class="pill">Status: <%= r.archived ? 'Archived' : 'Active' %></span>
                                     <span class="pill">Company: <%= r.fitCompany || 'n/a' %></span>
@@ -37,7 +37,7 @@
                             </div>
                             <div class="score-ring profile-ring score-ring-lg" style="--score:<%= typeof r.fitScore === 'number' ? (r.fitScore * 3.6) + 'deg' : '0deg' %>; --ring-color:<%= r.ringColor || '#555' %>; flex-shrink:0;">
                                 <div class="score-ring__fill"></div>
-                                <div class="score-ring__center"><%= typeof r.fitScore === 'number' ? r.fitScore : '-' %></div>
+                                <div class="score-ring__center score-ring__center--label"><%= r.fitBadge %></div>
                             </div>
                         </div>
 

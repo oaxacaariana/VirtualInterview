@@ -23,6 +23,15 @@ const verdictClass = (verdict) => {
   return 'is-mixed';
 };
 
+const ringColorForGrade = (grade) => {
+  if (grade === 'A') return '#2dd4bf';
+  if (grade === 'B') return '#60a5fa';
+  if (grade === 'C') return '#f0a202';
+  if (grade === 'D') return '#fb923c';
+  if (grade === 'F') return '#f65f5f';
+  return '#94a3b8';
+};
+
 const formatDuration = (ms = 0) => {
   const totalSeconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -247,42 +256,47 @@ export const createChatView = (elements) => {
     const improvements = (review.improvements || [])
       .map((item) => `<li>${escapeHtml(item)}</li>`)
       .join('');
+    const finalGrade = String(review.letterGrade || '').trim().toUpperCase() || 'C';
+    const ringColor = ringColorForGrade(finalGrade);
+    const gradeIsWide = finalGrade.length > 1;
     const bars = [
-      ['Relevance', review.categoryScores?.relevance || 0],
-      ['STAR', review.categoryScores?.star || 0],
-      ['Role fit', review.categoryScores?.roleAlignment || 0],
-      ['Clarity', review.categoryScores?.clarity || 0],
-      ['Confidence', review.categoryScores?.confidence || 0],
+      { label: 'Role fit', score: review.categoryScores?.roleAlignment || 0 },
+      { label: 'Relevance', score: review.categoryScores?.relevance || 0 },
+      { label: 'Structured answers', score: review.categoryScores?.star || 0 },
+      { label: 'Clarity', score: review.categoryScores?.clarity || 0 },
+      { label: 'Confidence', score: review.categoryScores?.confidence || 0 },
     ];
 
     finalScorePanel.innerHTML = `
       <div class="final-score-shell">
         <div class="final-score-hero">
-          <div class="score-ring results-ring final-score-ring" style="--score:${(Number(review.overallScore) || 0) * 3.6}deg; --ring-color:${Number(review.overallScore) >= 80 ? '#2dd4bf' : Number(review.overallScore) >= 65 ? '#60a5fa' : Number(review.overallScore) >= 50 ? '#f0a202' : '#f65f5f'};">
-            <div class="score-ring__fill"></div>
-            <div class="score-ring__center">${escapeHtml(review.overallScore)}</div>
+          <div class="final-score-grade">
+            <div class="final-score-grade__label">GRADE</div>
+            <div class="score-ring score-ring--open-center results-ring final-score-ring" style="--score:${(Number(review.overallScore) || 0) * 3.6}deg; --ring-color:${ringColor};">
+              <div class="score-ring__fill"></div>
+              <div class="score-ring__center">
+                <div class="final-score-grade__letter ${gradeIsWide ? 'final-score-grade__letter--wide' : ''}">${escapeHtml(finalGrade)}</div>
+              </div>
+            </div>
           </div>
           <div class="final-score-meta">
-            <p class="coach-card__eyebrow">Final grade</p>
-            <h4>${escapeHtml(review.letterGrade)}</h4>
             <p class="muted">${escapeHtml(review.overallSummary)}</p>
+            <p class="final-score-note">Structured answers uses the STAR format: situation, task, action, result. Role fit and relevance count more than confidence in the final grade.</p>
           </div>
         </div>
 
         <div class="final-pill-row">
           <span class="final-pill">Strongest: ${escapeHtml(review.strongestArea)}</span>
           <span class="final-pill">Weakest: ${escapeHtml(review.weakestArea)}</span>
-          <span class="final-pill">Turns reviewed: ${escapeHtml(review.reviewedTurns)}</span>
         </div>
 
         <div class="final-bars">
           ${bars
             .map(
-              ([label, score]) => `
+              ({ label, score }) => `
                 <div class="final-bar">
                   <div class="final-bar__label">
                     <span>${escapeHtml(label)}</span>
-                    <span>${escapeHtml(score)}/10</span>
                   </div>
                   <div class="final-bar__track">
                     <div class="final-bar__fill" style="width:${Math.max(0, Math.min(100, Number(score) * 10))}%"></div>

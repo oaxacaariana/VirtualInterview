@@ -63,6 +63,7 @@ Resume upload, lookup, scoring, and rendering:
 - `resumeService.js`
 - `resumeScoringService.js`
 - `resumeRepository.js`
+- `resumeScorePresentation.js`
 
 ### `src/server/interviews`
 
@@ -72,9 +73,12 @@ Interview generation, transcript persistence, and review flow:
 - `transcriptController.js`
 - `interviewService.js`
 - `interviewContextService.js`
+- `interviewConfig.js`
 - `interviewPromptBuilder.js`
 - `interviewValidators.js`
 - `reviewService.js`
+- `interviewReviewRubric.js`
+- `interviewGradeUtils.js`
 - `transcriptService.js`
 - `chatRepository.js`
 - `interviewScoreRepository.js`
@@ -128,16 +132,18 @@ CSS grouping:
 
 The interview experience now spans a few browser-side areas:
 
-- `src/views/openai.ejs` renders the avatar stage, camera picture-in-picture, transcript/coach side panels, and setup modal
-- `src/public/scripts/openai/` handles interview API calls, local UI state, speech-to-text, and interviewer text-to-speech playback
+- `src/views/openai.ejs` renders the avatar stage, camera picture-in-picture, transcript/coach side panels, and setup modal for resume, persona, and voice selection
+- `src/public/scripts/openai/` handles interview API calls, local UI state, speech-to-text, transcription requests, and interviewer text-to-speech playback
 - `src/public/scripts/eye-tracking/` contains the imported teammate eye-tracking bundle and calibration helpers
-- `src/public/styles/pages/interview.css` contains the avatar-stage and interview-shell styling
+- `src/public/styles/pages/interview.css` contains the avatar-stage, interview-shell, and final-review panel styling
 
 ### Interview Request and Browser Flow
 
 The server still owns interview generation and persistence, but the browser layer now also manages:
 
-1. microphone input via browser speech recognition
-2. interviewer reply playback via `/openai/tts`
-3. optional camera preview
-4. optional eye-contact tracking against the on-screen avatar region
+1. interview setup state including persona, voice, and role context
+2. microphone input via browser speech recognition and recorded-audio transcription
+3. interviewer reply playback via `/openai/tts`
+4. optional camera preview
+5. optional eye-contact tracking against the on-screen avatar region
+6. delayed completion UI so the final closing message is readable before the interview is marked complete

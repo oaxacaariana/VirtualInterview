@@ -19,17 +19,42 @@ const parseJsonResponse = async (response) => {
   return data;
 };
 
-const postJson = async (url, body) => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  return parseJsonResponse(response);
+const postJson = async (url, body, options = {}) => {
+  const maxAttempts = options.retryCount != null ? options.retryCount + 1 : 2;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      return parseJsonResponse(response);
+    } catch (error) {
+      lastError = error;
+      const isNetworkFailure = error?.name === 'TypeError' || /failed to fetch/i.test(error?.message || '');
+      const shouldRetry = isNetworkFailure && attempt < maxAttempts;
+
+      if (!shouldRetry) {
+        break;
+      }
+
+      await wait(350 * attempt);
+    }
+  }
+
+  const message = /failed to fetch/i.test(lastError?.message || '')
+    ? 'Could not reach the interview service. Please try again.'
+    : lastError?.message || 'Request failed';
+
+  throw new Error(message);
 };
 
 export const startInterview = (payload) => postJson('/openai/start', payload);
